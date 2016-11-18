@@ -36,6 +36,8 @@ import java.awt.image.BufferedImage;
 public final class ImageTextWriter {
 
 	private static final int DEFAULT_MARGIN = 10;
+	
+	private static final String LINE_END_LF = "\n";
 
 	private ImageTextWriter() {
 	}
@@ -55,8 +57,10 @@ public final class ImageTextWriter {
 		g.setFont(font);
 		FontMetrics fontMetrics = g.getFontMetrics();
 
-		int width = fontMetrics.stringWidth(text) + DEFAULT_MARGIN;
-		int height = fontMetrics.getHeight() + DEFAULT_MARGIN;
+		int lineCount = countLinesByLF(text);
+		String longestString = getWidestLineBasedOnFontMetrics(text.split(LINE_END_LF), fontMetrics);
+		int width = fontMetrics.stringWidth(longestString) + DEFAULT_MARGIN;
+		int height = fontMetrics.getHeight() * lineCount + DEFAULT_MARGIN;
 		return new Dimension(width, height);
 	}
 
@@ -79,13 +83,45 @@ public final class ImageTextWriter {
 		g.setFont(font);
 		FontMetrics fm = g.getFontMetrics();
 
-		int x = img.getWidth() - fm.stringWidth(text) - (DEFAULT_MARGIN / 2);
-		int y = ((img.getHeight() - fm.getHeight()) / 2) + fm.getAscent();
+		int x = img.getWidth() - fm.stringWidth(getWidestLineBasedOnFontMetrics(text.split(LINE_END_LF), fm)) - (DEFAULT_MARGIN / 2);
+		int y = ((img.getHeight() - (fm.getHeight() * countLinesByLF(text))) / 2) + fm.getAscent();
 
-		g.drawString(text, x, y);
+		if (countLinesByLF(text) > 1) {
+			drawString(g, text, x, y);
+		} else {
+			g.drawString(text, x, y);
+		}
 		g.dispose();
 
 		return img;
 	}
 
+	private static void drawString(Graphics g, String text, int x, int y) {
+		y -= g.getFontMetrics().getHeight(); // FIXME  this behavior is weird - must be fixed
+		for (String line : text.split(LINE_END_LF))
+			g.drawString(line, x, y += g.getFontMetrics().getHeight());
+	}
+
+	public static int countLinesByLF(String str) {
+		if (str == null || str.isEmpty())
+			return 0;
+		int lines = 1;
+		int pos = 0;
+		while ((pos = str.indexOf(LINE_END_LF, pos) + 1) != 0)
+			lines++;
+		return lines;
+	}
+
+	public static String getWidestLineBasedOnFontMetrics(String[] array, FontMetrics fontMetrics) {
+		int maxWidth = 0;
+		String widestString = null;
+		for (String s : array) {
+			int stringWidth = fontMetrics.stringWidth(s);
+			if (stringWidth > maxWidth) {
+				maxWidth = stringWidth;
+				widestString = s;
+			}
+		}
+		return widestString;
+	}
 }

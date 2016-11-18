@@ -34,6 +34,11 @@ public class RemoteSignatureParameters extends AbstractSerializableSignaturePara
 	 */
 	private RemoteDocument detachedContent;
 
+    /**
+     * This attribute is used to create visible signature in PAdES form
+     */
+    private RemoteSignatureImageParameters imageParameters;
+
 	/**
 	 *	ASiC Underlying
 	 */
@@ -73,5 +78,13 @@ public class RemoteSignatureParameters extends AbstractSerializableSignaturePara
 	public void setUnderlyingASiCForm(SignatureForm underlyingASiCForm) {
 		this.underlyingASiCForm = underlyingASiCForm;
 	}
+
+    public RemoteSignatureImageParameters getImageParameters() {
+        return imageParameters;
+    }
+
+    public void setImageParameters( RemoteSignatureImageParameters imageParameters ) {
+        this.imageParameters = imageParameters;
+    }
 
 }

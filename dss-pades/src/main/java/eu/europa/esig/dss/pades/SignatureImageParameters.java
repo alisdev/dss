@@ -56,6 +56,10 @@ public class SignatureImageParameters {
 	 */
 	private SignatureImageTextParameters textParameters;
 
+    private String signatureReason;
+
+    private String signerLocation;
+
 	public File getImage() {
 		return image;
 	}
@@ -95,5 +99,21 @@ public class SignatureImageParameters {
 	public void setTextParameters(SignatureImageTextParameters textParameters) {
 		this.textParameters = textParameters;
 	}
+
+    public String getSignatureReason() {
+        return signatureReason;
+    }
+
+    public void setSignatureReason( String signatureReason ) {
+        this.signatureReason = signatureReason;
+    }
+
+    public String getSignerLocation() {
+        return signerLocation;
+    }
+
+    public void setSignerLocation( String signerlocation ) {
+        signerLocation = signerlocation;
+    }
 
 }
