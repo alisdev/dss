@@ -17,9 +17,11 @@
     </bean>
 
 	<jaxws:endpoint id="jaxwsValidationService" implementor="#soapValidationService" address="/soap/ValidationService">
+	<!-- 
 		<jaxws:features>
 			<cxf:logging />
 		</jaxws:features>
+	 -->
 		<jaxws:properties>
 	      <entry key="mtom-enabled" value="true"/>
 	    </jaxws:properties>
