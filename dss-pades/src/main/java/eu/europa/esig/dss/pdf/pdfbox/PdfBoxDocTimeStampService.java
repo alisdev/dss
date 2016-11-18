@@ -31,6 +31,7 @@ import eu.europa.esig.dss.DSSASN1Utils;
 import eu.europa.esig.dss.DSSDocument;
 import eu.europa.esig.dss.DSSException;
 import eu.europa.esig.dss.DigestAlgorithm;
+import eu.europa.esig.dss.TimestampParameters;
 import eu.europa.esig.dss.pades.PAdESSignatureParameters;
 import eu.europa.esig.dss.pdf.PDFSignatureService;
 import eu.europa.esig.dss.pdf.PDFTimestampService;
@@ -56,12 +57,17 @@ class PdfBoxDocTimeStampService extends PdfBoxSignatureService implements PDFSig
 	@Override
 	public void timestamp(final DSSDocument document, final OutputStream signedStream, final PAdESSignatureParameters parameters, final TSPSource tspSource) throws DSSException {
 
-		final DigestAlgorithm timestampDigestAlgorithm = parameters.getSignatureTimestampParameters().getDigestAlgorithm();
-		InputStream inputStream = document.openStream();
-		final byte[] digest = digest(inputStream, parameters, timestampDigestAlgorithm);
-		IOUtils.closeQuietly(inputStream);
-		final TimeStampToken timeStampToken = tspSource.getTimeStampResponse(timestampDigestAlgorithm, digest);
-		final byte[] encoded = DSSASN1Utils.getEncoded(timeStampToken);
+		TimestampParameters signatureTimestampParameters = parameters.getSignatureTimestampParameters();
+		byte[] encoded = signatureTimestampParameters.getEncodedTimeStampToken();
+		final DigestAlgorithm timestampDigestAlgorithm = signatureTimestampParameters.getDigestAlgorithm();
+		InputStream inputStream;
+		if (encoded == null) {
+			inputStream = document.openStream();
+			final byte[] digest = digest(inputStream, parameters, timestampDigestAlgorithm);
+			IOUtils.closeQuietly(inputStream);
+			final TimeStampToken timeStampToken = tspSource.getTimeStampResponse(timestampDigestAlgorithm, digest);
+			encoded = DSSASN1Utils.getEncoded(timeStampToken);
+		}
 		inputStream = document.openStream();
 		sign(inputStream, encoded, signedStream, parameters, timestampDigestAlgorithm);
 		IOUtils.closeQuietly(inputStream);
