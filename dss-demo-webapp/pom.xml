@@ -5,9 +5,9 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<parent>
-		<groupId>eu.europa.ec.joinup.sd-dss</groupId>
+		<groupId>cz.alis.forked.eu.europa.ec.joinup.sd-dss</groupId>
 		<artifactId>sd-dss</artifactId>
-		<version>4.7.RC1</version>
+		<version>4.7.1.RC1</version>
 	</parent>
 
 	<artifactId>dss-demo-webapp</artifactId>
@@ -36,7 +36,7 @@
 						<configuration>
 							<artifactItems>
 								<artifactItem>
-									<groupId>eu.europa.ec.joinup.sd-dss</groupId>
+									<groupId>cz.alis.forked.eu.europa.ec.joinup.sd-dss</groupId>
 									<artifactId>dss-standalone-app-package</artifactId>
 									<type>zip</type>
 									<outputDirectory>${project.build.directory}/${project.artifactId}-${project.version}</outputDirectory>
@@ -54,7 +54,7 @@
 						<configuration>
 							<artifactItems>
 								<artifactItem>
-									<groupId>eu.europa.ec.joinup.sd-dss</groupId>
+									<groupId>cz.alis.forked.eu.europa.ec.joinup.sd-dss</groupId>
 									<artifactId>dss-standalone-app-package</artifactId>
 									<type>tar.gz</type>
 									<outputDirectory>${project.build.directory}/${project.artifactId}-${project.version}</outputDirectory>
@@ -133,28 +133,28 @@
 		</dependency>
 
 		<dependency>
-			<groupId>eu.europa.ec.joinup.sd-dss</groupId>
+			<groupId>cz.alis.forked.eu.europa.ec.joinup.sd-dss</groupId>
 			<artifactId>dss-document</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>eu.europa.ec.joinup.sd-dss</groupId>
+			<groupId>cz.alis.forked.eu.europa.ec.joinup.sd-dss</groupId>
 			<artifactId>dss-service</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>eu.europa.ec.joinup.sd-dss</groupId>
+			<groupId>cz.alis.forked.eu.europa.ec.joinup.sd-dss</groupId>
 			<artifactId>dss-tsl-validation</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>eu.europa.ec.joinup.sd-dss</groupId>
+			<groupId>cz.alis.forked.eu.europa.ec.joinup.sd-dss</groupId>
 			<artifactId>dss-policy-jaxb</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>eu.europa.ec.joinup.sd-dss</groupId>
+			<groupId>cz.alis.forked.eu.europa.ec.joinup.sd-dss</groupId>
 			<artifactId>dss-standalone-app-package</artifactId>
 			<scope>provided</scope>
 		</dependency>
 		<dependency>
-			<groupId>eu.europa.ec.joinup.sd-dss</groupId>
+			<groupId>cz.alis.forked.eu.europa.ec.joinup.sd-dss</groupId>
 			<artifactId>dss-cookbook</artifactId>
 			<scope>provided</scope>
 		</dependency>
@@ -174,24 +174,24 @@
 		
 		<!-- SOAP -->
 		<dependency>
-			<groupId>eu.europa.ec.joinup.sd-dss</groupId>
+			<groupId>cz.alis.forked.eu.europa.ec.joinup.sd-dss</groupId>
 			<artifactId>dss-soap</artifactId>
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
-			<groupId>eu.europa.ec.joinup.sd-dss</groupId>
+			<groupId>cz.alis.forked.eu.europa.ec.joinup.sd-dss</groupId>
 			<artifactId>dss-validation-soap</artifactId>
 			<scope>compile</scope>
 		</dependency>
 		
 		<!-- REST -->
 		<dependency>
-			<groupId>eu.europa.ec.joinup.sd-dss</groupId>
+			<groupId>cz.alis.forked.eu.europa.ec.joinup.sd-dss</groupId>
 			<artifactId>dss-rest</artifactId>
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
-			<groupId>eu.europa.ec.joinup.sd-dss</groupId>
+			<groupId>cz.alis.forked.eu.europa.ec.joinup.sd-dss</groupId>
 			<artifactId>dss-validation-rest</artifactId>
 			<scope>compile</scope>
 		</dependency>
