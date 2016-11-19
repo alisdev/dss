@@ -28,8 +28,6 @@ import java.util.regex.Pattern;
 
 import javax.xml.crypto.dsig.XMLSignature;
 
-import org.apache.commons.lang.ArrayUtils;
-import org.apache.commons.lang.StringUtils;
 import org.bouncycastle.util.encoders.Base64;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -41,6 +39,7 @@ import eu.europa.esig.dss.DSSException;
 import eu.europa.esig.dss.DSSUtils;
 import eu.europa.esig.dss.InMemoryDocument;
 import eu.europa.esig.dss.MimeType;
+import eu.europa.esig.dss.utils.Utils;
 import eu.europa.esig.dss.validation.AdvancedSignature;
 import eu.europa.esig.dss.validation.SignedDocumentValidator;
 import eu.europa.esig.dss.xades.DSSXMLUtils;
@@ -114,7 +113,7 @@ public class XMLDocumentValidator extends SignedDocumentValidator {
 	}
 
 	private boolean isXmlPreamble(byte[] preamble) {
-		byte[] startOfPramble = ArrayUtils.subarray(preamble, 0, xmlPreamble.length);
+		byte[] startOfPramble = Utils.subarray(preamble, 0, xmlPreamble.length);
 		return Arrays.equals(startOfPramble, xmlPreamble) || Arrays.equals(startOfPramble, xmlUtf8);
 	}
 
@@ -123,6 +122,9 @@ public class XMLDocumentValidator extends SignedDocumentValidator {
 		if (signatures != null) {
 			return signatures;
 		}
+
+		ensureCertificatePoolInitialized();
+
 		signatures = new ArrayList<AdvancedSignature>();
 		final NodeList signatureNodeList = DSSXMLUtils.getNodeList(rootElement, "//ds:Signature[not(parent::xades:CounterSignature)]");
 		// final NodeList signatureNodeList = rootElement.getElementsByTagNameNS(XMLSignature.XMLNS,
@@ -149,7 +151,7 @@ public class XMLDocumentValidator extends SignedDocumentValidator {
 	 */
 	public AdvancedSignature getSignatureById(final String signatureId) throws DSSException {
 
-		if (StringUtils.isBlank(signatureId)) {
+		if (Utils.isStringBlank(signatureId)) {
 			throw new NullPointerException("signatureId");
 		}
 		final List<AdvancedSignature> advancedSignatures = getSignatures();
@@ -166,7 +168,7 @@ public class XMLDocumentValidator extends SignedDocumentValidator {
 	@Override
 	public DSSDocument getOriginalDocument(final String signatureId) throws DSSException {
 
-		if (StringUtils.isBlank(signatureId)) {
+		if (Utils.isStringBlank(signatureId)) {
 			throw new NullPointerException("signatureId");
 		}
 		final NodeList signatureNodeList = rootElement.getElementsByTagNameNS(XMLSignature.XMLNS, XPathQueryHolder.XMLE_SIGNATURE);

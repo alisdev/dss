@@ -9,12 +9,18 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 
+import javax.xml.XMLConstants;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.Unmarshaller;
+import javax.xml.transform.Source;
+import javax.xml.transform.stream.StreamSource;
+import javax.xml.validation.Schema;
+import javax.xml.validation.SchemaFactory;
 
 import org.junit.Test;
 
 import eu.europa.esig.dss.jaxb.diagnostic.DiagnosticData;
+import eu.europa.esig.dss.utils.Utils;
 import eu.europa.esig.dss.validation.policy.EtsiValidationPolicy;
 import eu.europa.esig.dss.validation.policy.rules.Indication;
 import eu.europa.esig.dss.validation.policy.rules.SubIndication;
@@ -26,9 +32,27 @@ import eu.europa.esig.jaxb.policy.ConstraintsParameters;
 public class CustomProcessExecutorTest {
 
 	@Test
+	public void skipRevocationDataValidation() throws Exception {
+		FileInputStream fis = new FileInputStream("src/test/resources/it.xml");
+		DiagnosticData diagnosticData = getJAXBObjectFromString(fis, DiagnosticData.class, "/xsd/DiagnosticData.xsd");
+		assertNotNull(diagnosticData);
+
+		CustomProcessExecutor executor = new CustomProcessExecutor();
+		executor.setDiagnosticData(diagnosticData);
+		executor.setValidationPolicy(loadPolicyNoRevoc());
+		SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
+		Date currentTime = sdf.parse("19/07/2016 11:30:00");
+		executor.setCurrentTime(currentTime);
+
+		Reports reports = executor.execute();
+		SimpleReport simpleReport = reports.getSimpleReport();
+		assertEquals(Indication.TOTAL_PASSED, simpleReport.getIndication(simpleReport.getFirstSignatureId()));
+	}
+
+	@Test
 	public void signedDataNotFound() throws Exception {
 		FileInputStream fis = new FileInputStream("src/test/resources/signed_data_not_found.xml");
-		DiagnosticData diagnosticData = getJAXBObjectFromString(fis, DiagnosticData.class);
+		DiagnosticData diagnosticData = getJAXBObjectFromString(fis, DiagnosticData.class, "/xsd/DiagnosticData.xsd");
 		assertNotNull(diagnosticData);
 
 		CustomProcessExecutor executor = new CustomProcessExecutor();
@@ -61,7 +85,7 @@ public class CustomProcessExecutorTest {
 	@Test
 	public void noPoeRevokedNoTimestamp() throws Exception {
 		FileInputStream fis = new FileInputStream("src/test/resources/no_poe_revoked_no_timestamp.xml");
-		DiagnosticData diagnosticData = getJAXBObjectFromString(fis, DiagnosticData.class);
+		DiagnosticData diagnosticData = getJAXBObjectFromString(fis, DiagnosticData.class, "/xsd/DiagnosticData.xsd");
 		assertNotNull(diagnosticData);
 
 		CustomProcessExecutor executor = new CustomProcessExecutor();
@@ -94,7 +118,7 @@ public class CustomProcessExecutorTest {
 	@Test
 	public void passedRevokedWithTimestamp() throws Exception {
 		FileInputStream fis = new FileInputStream("src/test/resources/passed_revoked_with_timestamp.xml");
-		DiagnosticData diagnosticData = getJAXBObjectFromString(fis, DiagnosticData.class);
+		DiagnosticData diagnosticData = getJAXBObjectFromString(fis, DiagnosticData.class, "/xsd/DiagnosticData.xsd");
 		assertNotNull(diagnosticData);
 
 		CustomProcessExecutor executor = new CustomProcessExecutor();
@@ -127,7 +151,7 @@ public class CustomProcessExecutorTest {
 	@Test
 	public void passedOutOfBoundsWithTimestamps() throws Exception {
 		FileInputStream fis = new FileInputStream("src/test/resources/passed_out_of_bounds_with_timestamps.xml");
-		DiagnosticData diagnosticData = getJAXBObjectFromString(fis, DiagnosticData.class);
+		DiagnosticData diagnosticData = getJAXBObjectFromString(fis, DiagnosticData.class, "/xsd/DiagnosticData.xsd");
 		assertNotNull(diagnosticData);
 
 		CustomProcessExecutor executor = new CustomProcessExecutor();
@@ -162,7 +186,7 @@ public class CustomProcessExecutorTest {
 	@Test
 	public void hashFailure() throws Exception {
 		FileInputStream fis = new FileInputStream("src/test/resources/hash_failure.xml");
-		DiagnosticData diagnosticData = getJAXBObjectFromString(fis, DiagnosticData.class);
+		DiagnosticData diagnosticData = getJAXBObjectFromString(fis, DiagnosticData.class, "/xsd/DiagnosticData.xsd");
 		assertNotNull(diagnosticData);
 
 		CustomProcessExecutor executor = new CustomProcessExecutor();
@@ -195,7 +219,7 @@ public class CustomProcessExecutorTest {
 	@Test
 	public void sigConstraintFailure() throws Exception {
 		FileInputStream fis = new FileInputStream("src/test/resources/sig_constraint_failure.xml");
-		DiagnosticData diagnosticData = getJAXBObjectFromString(fis, DiagnosticData.class);
+		DiagnosticData diagnosticData = getJAXBObjectFromString(fis, DiagnosticData.class, "/xsd/DiagnosticData.xsd");
 		assertNotNull(diagnosticData);
 
 		CustomProcessExecutor executor = new CustomProcessExecutor();
@@ -228,7 +252,7 @@ public class CustomProcessExecutorTest {
 	@Test
 	public void signingCertificateNotFound() throws Exception {
 		FileInputStream fis = new FileInputStream("src/test/resources/signing_certificate_not_found.xml");
-		DiagnosticData diagnosticData = getJAXBObjectFromString(fis, DiagnosticData.class);
+		DiagnosticData diagnosticData = getJAXBObjectFromString(fis, DiagnosticData.class, "/xsd/DiagnosticData.xsd");
 		assertNotNull(diagnosticData);
 
 		CustomProcessExecutor executor = new CustomProcessExecutor();
@@ -265,10 +289,28 @@ public class CustomProcessExecutorTest {
 		return new EtsiValidationPolicy(policyJaxB);
 	}
 
-	@SuppressWarnings("unchecked")
+	private EtsiValidationPolicy loadPolicyNoRevoc() throws Exception {
+		FileInputStream policyFis = new FileInputStream("src/test/resources/constraint-no-revoc.xml");
+		ConstraintsParameters policyJaxB = getJAXBObjectFromString(policyFis, ConstraintsParameters.class);
+		assertNotNull(policyJaxB);
+		return new EtsiValidationPolicy(policyJaxB);
+	}
+
 	private <T extends Object> T getJAXBObjectFromString(InputStream is, Class<T> clazz) throws Exception {
+		return getJAXBObjectFromString(is, clazz, null);
+	}
+
+	@SuppressWarnings("unchecked")
+	private <T extends Object> T getJAXBObjectFromString(InputStream is, Class<T> clazz, String xsd) throws Exception {
 		JAXBContext context = JAXBContext.newInstance(clazz.getPackage().getName());
 		Unmarshaller unmarshaller = context.createUnmarshaller();
+		if (Utils.isStringNotEmpty(xsd)) {
+			SchemaFactory sf = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
+			InputStream inputStream = this.getClass().getResourceAsStream(xsd);
+			Source source = new StreamSource(inputStream);
+			Schema schema = sf.newSchema(source);
+			unmarshaller.setSchema(schema);
+		}
 		return (T) unmarshaller.unmarshal(is);
 	}
 

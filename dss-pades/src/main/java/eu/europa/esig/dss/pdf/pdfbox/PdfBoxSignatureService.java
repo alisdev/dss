@@ -39,11 +39,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.codec.binary.Hex;
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.ArrayUtils;
-import org.apache.commons.lang.StringUtils;
 import org.apache.pdfbox.cos.COSArray;
 import org.apache.pdfbox.cos.COSDictionary;
 import org.apache.pdfbox.cos.COSName;
@@ -77,6 +72,7 @@ import eu.europa.esig.dss.pdf.PdfDssDict;
 import eu.europa.esig.dss.pdf.PdfSignatureOrDocTimestampInfo;
 import eu.europa.esig.dss.pdf.PdfSignatureOrDocTimestampInfoComparator;
 import eu.europa.esig.dss.pdf.SignatureValidationCallback;
+import eu.europa.esig.dss.utils.Utils;
 import eu.europa.esig.dss.x509.CertificatePool;
 import eu.europa.esig.dss.x509.CertificateToken;
 import eu.europa.esig.dss.x509.Token;
@@ -111,7 +107,7 @@ class PdfBoxSignatureService implements PDFSignatureService {
 		} catch (IOException e) {
 			throw new DSSException(e);
 		} finally {
-			IOUtils.closeQuietly(pdDocument);
+			Utils.closeQuietly(pdDocument);
 			DSSUtils.delete(toSignFile);
 			DSSUtils.delete(signedFile);
 		}
@@ -139,13 +135,13 @@ class PdfBoxSignatureService implements PDFSignatureService {
 			signDocumentAndReturnDigest(parameters, signatureValue, signedFile, fileOutputStream, pdDocument, pdSignature, digestAlgorithm);
 
 			finalFileInputStream = new FileInputStream(signedFile);
-			IOUtils.copy(finalFileInputStream, signedStream);
+			Utils.copy(finalFileInputStream, signedStream);
 		} catch (IOException e) {
 			throw new DSSException(e);
 		} finally {
-			IOUtils.closeQuietly(fileInputStream);
-			IOUtils.closeQuietly(finalFileInputStream);
-			IOUtils.closeQuietly(pdDocument);
+			Utils.closeQuietly(fileInputStream);
+			Utils.closeQuietly(finalFileInputStream);
+			Utils.closeQuietly(pdDocument);
 			DSSUtils.delete(toSignFile);
 			DSSUtils.delete(signedFile);
 		}
@@ -183,7 +179,7 @@ class PdfBoxSignatureService implements PDFSignatureService {
 			saveDocumentIncrementally(parameters, signedFile, fileOutputStream, pdDocument);
 			final byte[] digestValue = digest.digest();
 			if (logger.isDebugEnabled()) {
-				logger.debug("Digest to be signed: " + Hex.encodeHexString(digestValue));
+				logger.debug("Digest to be signed: " + Utils.toHex(digestValue));
 			}
 			fileOutputStream.close();
 			return digestValue;
@@ -192,7 +188,7 @@ class PdfBoxSignatureService implements PDFSignatureService {
 		} catch (SignatureException e) {
 			throw new DSSException(e);
 		} finally {
-			IOUtils.closeQuietly(options.getVisualSignature());
+			Utils.closeQuietly(options.getVisualSignature());
 		}
 	}
 
@@ -216,7 +212,7 @@ class PdfBoxSignatureService implements PDFSignatureService {
 			options.setVisualSignature(signatureProperties);
 			options.setPage(imgParams.getPage());
 		} finally {
-			IOUtils.closeQuietly(is);
+			Utils.closeQuietly(is);
 		}
 	}
 
@@ -226,7 +222,7 @@ class PdfBoxSignatureService implements PDFSignatureService {
 		signature.setType(getType());
 		// signature.setName(String.format("SD-DSS Signature %s", parameters.getDeterministicId()));
 		Date date = parameters.bLevel().getSigningDate();
-		String encodedDate = " " + Hex.encodeHexString(DSSUtils.digest(DigestAlgorithm.SHA1, Long.toString(date.getTime()).getBytes()));
+		String encodedDate = " " + Utils.toHex(DSSUtils.digest(DigestAlgorithm.SHA1, Long.toString(date.getTime()).getBytes()));
 		CertificateToken token = parameters.getSigningCertificate();
 		if (token == null) {
 			signature.setName("Unknown signer" + encodedDate);
@@ -244,15 +240,15 @@ class PdfBoxSignatureService implements PDFSignatureService {
 		signature.setSubFilter(getSubFilter());
 
 		if (COSName.SIG.equals(getType())) {
-			if (StringUtils.isNotEmpty(parameters.getContactInfo())) {
+			if (Utils.isStringNotEmpty(parameters.getContactInfo())) {
 				signature.setContactInfo(parameters.getContactInfo());
 			}
 
-			if (StringUtils.isNotEmpty(parameters.getLocation())) {
+			if (Utils.isStringNotEmpty(parameters.getLocation())) {
 				signature.setLocation(parameters.getLocation());
 			}
 
-			if (StringUtils.isNotEmpty(parameters.getReason())) {
+			if (Utils.isStringNotEmpty(parameters.getReason())) {
 				signature.setReason(parameters.getReason());
 			}
 		}
@@ -291,7 +287,7 @@ class PdfBoxSignatureService implements PDFSignatureService {
 		} catch (COSVisitorException e) {
 			throw new DSSException(e);
 		} finally {
-			IOUtils.closeQuietly(signedFileInputStream);
+			Utils.closeQuietly(signedFileInputStream);
 		}
 	}
 
@@ -304,7 +300,7 @@ class PdfBoxSignatureService implements PDFSignatureService {
 		// recursive search of signature
 		InputStream inputStream = document.openStream();
 		try {
-			List<PdfSignatureOrDocTimestampInfo> signaturesFound = getSignatures(validationCertPool, IOUtils.toByteArray(inputStream));
+			List<PdfSignatureOrDocTimestampInfo> signaturesFound = getSignatures(validationCertPool, Utils.toByteArray(inputStream));
 			for (PdfSignatureOrDocTimestampInfo pdfSignatureOrDocTimestampInfo : signaturesFound) {
 				callback.validate(pdfSignatureOrDocTimestampInfo);
 			}
@@ -312,7 +308,7 @@ class PdfBoxSignatureService implements PDFSignatureService {
 			logger.error("Cannot validate signatures : " + e.getMessage(), e);
 		}
 
-		IOUtils.closeQuietly(inputStream);
+		Utils.closeQuietly(inputStream);
 	}
 
 	private List<PdfSignatureOrDocTimestampInfo> getSignatures(CertificatePool validationCertPool, byte[] originalBytes) {
@@ -325,7 +321,7 @@ class PdfBoxSignatureService implements PDFSignatureService {
 			doc = PDDocument.load(bais);
 
 			List<PDSignature> pdSignatures = doc.getSignatureDictionaries();
-			if (CollectionUtils.isNotEmpty(pdSignatures)) {
+			if (Utils.isCollectionNotEmpty(pdSignatures)) {
 				logger.debug("{} signature(s) found", pdSignatures.size());
 
 				PdfDict catalog = new PdfBoxDict(doc.getDocumentCatalog().getCOSDictionary(), doc);
@@ -335,7 +331,7 @@ class PdfBoxSignatureService implements PDFSignatureService {
 					String subFilter = signature.getSubFilter();
 					byte[] cms = signature.getContents(originalBytes);
 
-					if (StringUtils.isEmpty(subFilter) || ArrayUtils.isEmpty(cms)) {
+					if (Utils.isStringEmpty(subFilter) || Utils.isArrayEmpty(cms)) {
 						logger.warn("Wrong signature with empty subfilter or cms.");
 						continue;
 					}
@@ -376,8 +372,8 @@ class PdfBoxSignatureService implements PDFSignatureService {
 		} catch (Exception e) {
 			logger.warn("Cannot analyze signatures : " + e.getMessage(), e);
 		} finally {
-			IOUtils.closeQuietly(bais);
-			IOUtils.closeQuietly(doc);
+			Utils.closeQuietly(bais);
+			Utils.closeQuietly(doc);
 		}
 
 		return signatures;
@@ -390,7 +386,7 @@ class PdfBoxSignatureService implements PDFSignatureService {
 	private void linkSignatures(List<PdfSignatureOrDocTimestampInfo> signatures) {
 		List<PdfSignatureOrDocTimestampInfo> previousList = new ArrayList<PdfSignatureOrDocTimestampInfo>();
 		for (PdfSignatureOrDocTimestampInfo sig : signatures) {
-			if (CollectionUtils.isNotEmpty(previousList)) {
+			if (Utils.isCollectionNotEmpty(previousList)) {
 				for (PdfSignatureOrDocTimestampInfo previous : previousList) {
 					previous.addOuterSignature(sig);
 				}
@@ -407,15 +403,15 @@ class PdfBoxSignatureService implements PDFSignatureService {
 			bais = new ByteArrayInputStream(originalBytes);
 			doc = PDDocument.load(bais);
 			List<PDSignature> pdSignatures = doc.getSignatureDictionaries();
-			if (CollectionUtils.isNotEmpty(pdSignatures)) {
+			if (Utils.isCollectionNotEmpty(pdSignatures)) {
 				PdfDict catalog = new PdfBoxDict(doc.getDocumentCatalog().getCOSDictionary(), doc);
 				dssDictionary = PdfDssDict.extract(catalog);
 			}
 		} catch (Exception e) {
 			logger.warn("Cannot check in previous revisions if DSS dictionary already exist : " + e.getMessage(), e);
 		} finally {
-			IOUtils.closeQuietly(bais);
-			IOUtils.closeQuietly(doc);
+			Utils.closeQuietly(bais);
+			Utils.closeQuietly(doc);
 		}
 
 		return dssDictionary != null;
@@ -442,7 +438,7 @@ class PdfBoxSignatureService implements PDFSignatureService {
 
 			final FileOutputStream fileOutputStream = DSSPDFUtils.getFileOutputStream(toSignFile, signedFile);
 
-			if (CollectionUtils.isNotEmpty(callbacks)) {
+			if (Utils.isCollectionNotEmpty(callbacks)) {
 				final COSDictionary cosDictionary = pdDocument.getDocumentCatalog().getCOSDictionary();
 				cosDictionary.setItem("DSS", buildDSSDictionary(callbacks));
 				cosDictionary.setNeedToBeUpdate(true);
@@ -454,12 +450,12 @@ class PdfBoxSignatureService implements PDFSignatureService {
 			pdDocument.saveIncremental(inputStream, fileOutputStream);
 
 			fis = new FileInputStream(signedFile);
-			IOUtils.copy(fis, outpuStream);
+			Utils.copy(fis, outpuStream);
 		} catch (Exception e) {
 			throw new DSSException(e);
 		} finally {
-			IOUtils.closeQuietly(pdDocument);
-			IOUtils.closeQuietly(fis);
+			Utils.closeQuietly(pdDocument);
+			Utils.closeQuietly(fis);
 			DSSUtils.delete(toSignFile);
 			DSSUtils.delete(signedFile);
 		}
@@ -479,7 +475,7 @@ class PdfBoxSignatureService implements PDFSignatureService {
 			COSDictionary sigVriDictionary = new COSDictionary();
 			sigVriDictionary.setDirect(true);
 
-			if (CollectionUtils.isNotEmpty(callback.getCertificates())) {
+			if (Utils.isCollectionNotEmpty(callback.getCertificates())) {
 				COSArray vriCertArray = new COSArray();
 				for (CertificateToken token : callback.getCertificates()) {
 					vriCertArray.add(getStream(streams, token));
@@ -488,7 +484,7 @@ class PdfBoxSignatureService implements PDFSignatureService {
 				sigVriDictionary.setItem("Cert", vriCertArray);
 			}
 
-			if (CollectionUtils.isNotEmpty(callback.getOcsps())) {
+			if (Utils.isCollectionNotEmpty(callback.getOcsps())) {
 				COSArray vriOcspArray = new COSArray();
 				for (OCSPToken token : callback.getOcsps()) {
 					vriOcspArray.add(getStream(streams, token));
@@ -497,7 +493,7 @@ class PdfBoxSignatureService implements PDFSignatureService {
 				sigVriDictionary.setItem("OCSP", vriOcspArray);
 			}
 
-			if (CollectionUtils.isNotEmpty(callback.getCrls())) {
+			if (Utils.isCollectionNotEmpty(callback.getCrls())) {
 				COSArray vriCrlArray = new COSArray();
 				for (CRLToken token : callback.getCrls()) {
 					vriCrlArray.add(getStream(streams, token));
@@ -508,13 +504,13 @@ class PdfBoxSignatureService implements PDFSignatureService {
 
 			PAdESSignature signature = callback.getSignature();
 			final byte[] digest = DSSUtils.digest(DigestAlgorithm.SHA1, signature.getCAdESSignature().getCmsSignedData().getEncoded());
-			String hexHash = Hex.encodeHexString(digest).toUpperCase();
+			String hexHash = Utils.toHex(digest).toUpperCase();
 
 			vriDictionary.setItem(hexHash, sigVriDictionary);
 		}
 		dss.setItem("VRI", vriDictionary);
 
-		if (CollectionUtils.isNotEmpty(allCertificates)) {
+		if (Utils.isCollectionNotEmpty(allCertificates)) {
 			COSArray arrayAllCerts = new COSArray();
 			for (CertificateToken token : allCertificates) {
 				arrayAllCerts.add(getStream(streams, token));
@@ -522,7 +518,7 @@ class PdfBoxSignatureService implements PDFSignatureService {
 			dss.setItem("Certs", arrayAllCerts);
 		}
 
-		if (CollectionUtils.isNotEmpty(allOcsps)) {
+		if (Utils.isCollectionNotEmpty(allOcsps)) {
 			COSArray arrayAllOcsps = new COSArray();
 			for (OCSPToken token : allOcsps) {
 				arrayAllOcsps.add(getStream(streams, token));
@@ -530,7 +526,7 @@ class PdfBoxSignatureService implements PDFSignatureService {
 			dss.setItem("OCSPs", arrayAllOcsps);
 		}
 
-		if (CollectionUtils.isNotEmpty(allCrls)) {
+		if (Utils.isCollectionNotEmpty(allCrls)) {
 			COSArray arrayAllCrls = new COSArray();
 			for (CRLToken token : allCrls) {
 				arrayAllCrls.add(getStream(streams, token));

@@ -37,11 +37,6 @@ import java.util.TreeMap;
 
 import javax.xml.bind.DatatypeConverter;
 
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.ArrayUtils;
-import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,13 +50,15 @@ import eu.europa.esig.dss.tsl.TSLConditionsForQualifiers;
 import eu.europa.esig.dss.tsl.TSLLoaderResult;
 import eu.europa.esig.dss.tsl.TSLParserResult;
 import eu.europa.esig.dss.tsl.TSLService;
-import eu.europa.esig.dss.tsl.TSLServiceExtension;
 import eu.europa.esig.dss.tsl.TSLServiceProvider;
-import eu.europa.esig.dss.tsl.TSLServiceStatus;
+import eu.europa.esig.dss.tsl.TSLServiceStatusAndInformationExtensions;
 import eu.europa.esig.dss.tsl.TSLValidationModel;
 import eu.europa.esig.dss.tsl.TSLValidationResult;
 import eu.europa.esig.dss.tsl.TSLValidationSummary;
 import eu.europa.esig.dss.tsl.TrustedListsCertificateSource;
+import eu.europa.esig.dss.util.MutableTimeDependentValues;
+import eu.europa.esig.dss.util.TimeDependentValues;
+import eu.europa.esig.dss.utils.Utils;
 import eu.europa.esig.dss.x509.CertificateToken;
 
 /**
@@ -167,7 +164,7 @@ public class TSLRepository {
 
 	public void clearRepository() {
 		try {
-			FileUtils.cleanDirectory(new File(cacheDirectoryPath));
+			Utils.cleanDirectory(new File(cacheDirectoryPath));
 			tsls.clear();
 		} catch (IOException e) {
 			logger.error("Unable to clean cache directory : " + e.getMessage(), e);
@@ -180,13 +177,13 @@ public class TSLRepository {
 			return false;
 		} else {
 			// TODO Best place ? Download didn't work, we use previous version
-			if (ArrayUtils.isEmpty(resultLoader.getContent())) {
+			if (Utils.isArrayEmpty(resultLoader.getContent())) {
 				return true;
 			}
 			validationModel.setUrl(resultLoader.getUrl());
 			validationModel.setLoadedDate(new Date());
 			String lastSha256 = getSHA256(resultLoader.getContent());
-			return StringUtils.equals(lastSha256, validationModel.getSha256FileContent());
+			return Utils.areStringsEqual(lastSha256, validationModel.getSha256FileContent());
 		}
 	}
 
@@ -224,12 +221,12 @@ public class TSLRepository {
 		FileInputStream fis = null;
 		try {
 			fis = new FileInputStream(filePath);
-			byte[] data = IOUtils.toByteArray(fis);
+			byte[] data = Utils.toByteArray(fis);
 			validationModel.setSha256FileContent(getSHA256(data));
 		} catch (Exception e) {
 			logger.error("Unable to read '" + filePath + "' : " + e.getMessage());
 		} finally {
-			IOUtils.closeQuietly(fis);
+			Utils.closeQuietly(fis);
 		}
 		validationModel.setParseResult(tslParserResult);
 		validationModel.setCertificateSourceSynchronized(false);
@@ -247,11 +244,11 @@ public class TSLRepository {
 		OutputStream os = null;
 		try {
 			os = new FileOutputStream(fileToCreate);
-			IOUtils.write(resultLoader.getContent(), os);
+			Utils.write(resultLoader.getContent(), os);
 		} catch (Exception e) {
 			throw new DSSException("Cannot create file in cache : " + e.getMessage(), e);
 		} finally {
-			IOUtils.closeQuietly(os);
+			Utils.closeQuietly(os);
 		}
 		return filePath;
 	}
@@ -335,7 +332,7 @@ public class TSLRepository {
 			logger.info("Nb of trusted certificates : " + trustedListsCertificateSource.getNumberOfTrustedCertificates());
 			logger.info("Nb of skipped trusted lists : " + skippedTSLValidationModels.size());
 
-			if (CollectionUtils.isNotEmpty(skippedTSLValidationModels)) {
+			if (Utils.isCollectionNotEmpty(skippedTSLValidationModels)) {
 				for (TSLValidationModel tslValidationModel : skippedTSLValidationModels) {
 					logger.info(tslValidationModel.getUrl() + " is skipped");
 				}
@@ -354,30 +351,41 @@ public class TSLRepository {
 		serviceInfo.setServiceName(service.getName());
 		serviceInfo.setType(service.getType());
 
-		List<ServiceInfoStatus> status = new ArrayList<ServiceInfoStatus>();
-		List<TSLServiceStatus> serviceStatus = service.getStatus();
-		if (CollectionUtils.isNotEmpty(serviceStatus)) {
-			for (TSLServiceStatus tslServiceStatus : serviceStatus) {
-				status.add(new ServiceInfoStatus(tslServiceStatus.getStatus(), tslServiceStatus.getStartDate(), tslServiceStatus.getEndDate()));
+		final MutableTimeDependentValues<ServiceInfoStatus> status = new MutableTimeDependentValues<ServiceInfoStatus>();
+		final TimeDependentValues<TSLServiceStatusAndInformationExtensions> serviceStatus = service.getStatusAndInformationExtensions();
+		if (serviceStatus != null) {
+			for (TSLServiceStatusAndInformationExtensions tslServiceStatus : serviceStatus) {
+				final Map<String, List<Condition>> qualifiersAndConditions = getMapConditionsByQualifier(tslServiceStatus);
+				final ServiceInfoStatus s = new ServiceInfoStatus(tslServiceStatus.getStatus(), qualifiersAndConditions,
+						tslServiceStatus.getAdditionalServiceInfoUris(), tslServiceStatus.getExpiredCertsRevocationInfo(), tslServiceStatus.getStartDate(),
+						tslServiceStatus.getEndDate());
+
+				status.addOldest(s);
 			}
 		}
 		serviceInfo.setStatus(status);
+		serviceInfo.setTlWellSigned(tlWellSigned);
+		return serviceInfo;
+	}
 
-		List<TSLServiceExtension> extensions = service.getExtensions();
-		if (CollectionUtils.isNotEmpty(extensions)) {
-			for (TSLServiceExtension tslServiceExtension : extensions) {
-				List<TSLConditionsForQualifiers> conditionsForQualifiers = tslServiceExtension.getConditionsForQualifiers();
-				for (TSLConditionsForQualifiers tslConditionsForQualifiers : conditionsForQualifiers) {
-					Condition condition = tslConditionsForQualifiers.getCondition();
-					for (String qualifier : tslConditionsForQualifiers.getQualifiers()) {
-						serviceInfo.addQualifierAndCondition(qualifier, condition);
+	private Map<String, List<Condition>> getMapConditionsByQualifier(TSLServiceStatusAndInformationExtensions tslServiceStatus) {
+		List<TSLConditionsForQualifiers> conditionsForQualifiers = tslServiceStatus.getConditionsForQualifiers();
+		final Map<String, List<Condition>> qualifiersAndConditions = new HashMap<String, List<Condition>>();
+		if (conditionsForQualifiers != null) {
+			for (TSLConditionsForQualifiers tslConditionsForQualifiers : conditionsForQualifiers) {
+				Condition condition = tslConditionsForQualifiers.getCondition();
+				for (String qualifier : tslConditionsForQualifiers.getQualifiers()) {
+					List<Condition> conditionsForQualif = qualifiersAndConditions.get(qualifier);
+					if (conditionsForQualif == null) {
+						conditionsForQualif = new ArrayList<Condition>();
+						qualifiersAndConditions.put(qualifier, conditionsForQualif);
+
 					}
+					conditionsForQualif.add(condition);
 				}
 			}
 		}
-
-		serviceInfo.setTlWellSigned(tlWellSigned);
-		return serviceInfo;
+		return qualifiersAndConditions;
 	}
 
 	public List<TSLValidationSummary> getSummary() {
@@ -409,7 +417,7 @@ public class TSLRepository {
 							nbServices += services.size();
 							for (TSLService tslService : services) {
 								List<CertificateToken> certificates = tslService.getCertificates();
-								nbCertificatesAndX500Principals += CollectionUtils.size(certificates);
+								nbCertificatesAndX500Principals += Utils.collectionSize(certificates);
 							}
 						}
 					}

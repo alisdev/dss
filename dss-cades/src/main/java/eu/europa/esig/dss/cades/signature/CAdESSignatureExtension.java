@@ -26,8 +26,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import org.apache.commons.codec.binary.Hex;
-import org.apache.commons.io.IOUtils;
 import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1Object;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
@@ -53,6 +51,7 @@ import eu.europa.esig.dss.cades.CAdESSignatureParameters;
 import eu.europa.esig.dss.cades.CMSUtils;
 import eu.europa.esig.dss.cades.validation.CAdESSignature;
 import eu.europa.esig.dss.signature.SignatureExtension;
+import eu.europa.esig.dss.utils.Utils;
 import eu.europa.esig.dss.validation.SignatureCryptographicVerification;
 import eu.europa.esig.dss.x509.tsp.TSPSource;
 
@@ -108,7 +107,7 @@ abstract class CAdESSignatureExtension implements SignatureExtension<CAdESSignat
 		try {
 			final InputStream inputStream = signatureToExtend.openStream();
 			final CMSSignedData cmsSignedData = new CMSSignedData(inputStream);
-			IOUtils.closeQuietly(inputStream);
+			Utils.closeQuietly(inputStream);
 			final CMSSignedData extendCMSSignedData = extendCMSSignatures(cmsSignedData, parameters);
 			final CMSSignedDocument cmsSignedDocument = new CMSSignedDocument(extendCMSSignedData);
 			return cmsSignedDocument;
@@ -227,7 +226,8 @@ abstract class CAdESSignatureExtension implements SignatureExtension<CAdESSignat
 	 * @return
 	 * @throws java.io.IOException
 	 */
-	abstract protected SignerInformation extendCMSSignature(CMSSignedData signedData, SignerInformation signerInformation, CAdESSignatureParameters parameters) throws DSSException;
+	abstract protected SignerInformation extendCMSSignature(CMSSignedData signedData, SignerInformation signerInformation, CAdESSignatureParameters parameters)
+			throws DSSException;
 
 	/**
 	 * Extends the root Signed Data. Nothing to do by default.
@@ -260,6 +260,7 @@ abstract class CAdESSignatureExtension implements SignatureExtension<CAdESSignat
 
 	public static ASN1Object getTimeStampAttributeValue(final TSPSource tspSource, final byte[] messageToTimestamp, CAdESSignatureParameters parameters,
 			final Attribute... attributesForTimestampToken) {
+
 		try {
 			TimestampParameters signatureTimestampParameters = parameters.getSignatureTimestampParameters();
 			final DigestAlgorithm timestampDigestAlgorithm = signatureTimestampParameters.getDigestAlgorithm();

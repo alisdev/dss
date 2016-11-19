@@ -4,13 +4,9 @@ import java.text.MessageFormat;
 import java.util.Date;
 import java.util.List;
 
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.lang.StringUtils;
-
 import eu.europa.esig.dss.jaxb.detailedreport.XmlXCV;
-import eu.europa.esig.dss.jaxb.diagnostic.XmlServiceStatus;
-import eu.europa.esig.dss.jaxb.diagnostic.XmlServiceStatusType;
 import eu.europa.esig.dss.jaxb.diagnostic.XmlTrustedServiceProviderType;
+import eu.europa.esig.dss.utils.Utils;
 import eu.europa.esig.dss.validation.AdditionalInfo;
 import eu.europa.esig.dss.validation.MessageTag;
 import eu.europa.esig.dss.validation.policy.Context;
@@ -46,19 +42,14 @@ public class TrustedServiceStatusCheck extends AbstractMultiValuesCheckItem<XmlX
 
 		List<XmlTrustedServiceProviderType> tspList = certificate.getCertificateTSPService();
 		for (XmlTrustedServiceProviderType trustedServiceProvider : tspList) {
-			XmlServiceStatus serviceStatus = trustedServiceProvider.getServiceStatus();
-			if (serviceStatus != null && CollectionUtils.isNotEmpty(serviceStatus.getStatusService())) {
-				for (XmlServiceStatusType status : serviceStatus.getStatusService()) {
-					serviceStatusStr = StringUtils.trim(status.getStatus());
-					if (processValueCheck(serviceStatusStr)) {
-						Date statusStartDate = status.getStartDate();
-						Date statusEndDate = status.getEndDate();
-						// The issuing time of the certificate should be into the validity period of the associated
-						// service
-						if ((usageTime.compareTo(statusStartDate) >= 0) && ((statusEndDate == null) || usageTime.before(statusEndDate))) {
-							return true;
-						}
-					}
+			serviceStatusStr = Utils.trim(trustedServiceProvider.getStatus());
+			Date statusStartDate = trustedServiceProvider.getStartDate();
+			if (processValueCheck(serviceStatusStr) && statusStartDate != null) {
+				Date statusEndDate = trustedServiceProvider.getEndDate();
+				// The issuing time of the certificate should be into the validity period of the associated
+				// service
+				if ((usageTime.compareTo(statusStartDate) >= 0) && ((statusEndDate == null) || usageTime.before(statusEndDate))) {
+					return true;
 				}
 			}
 		}
@@ -67,7 +58,7 @@ public class TrustedServiceStatusCheck extends AbstractMultiValuesCheckItem<XmlX
 
 	@Override
 	protected String getAdditionalInfo() {
-		if (StringUtils.isNotEmpty(serviceStatusStr)) {
+		if (Utils.isStringNotEmpty(serviceStatusStr)) {
 			Object[] params = new Object[] { serviceStatusStr };
 			return MessageFormat.format(AdditionalInfo.TRUSTED_SERVICE_STATUS, params);
 		}

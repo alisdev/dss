@@ -3,7 +3,7 @@
 	<parent>
 		<groupId>cz.alis.forked.eu.europa.ec.joinup.sd-dss</groupId>
 		<artifactId>sd-dss</artifactId>
-		<version>4.7.1.RC1</version>
+		<version>4.8-SNAPSHOT</version>
 	</parent>
 	<artifactId>dss-standalone-app</artifactId>
 	<name>DSS Standalone application</name>
@@ -49,6 +49,17 @@
 			<groupId>cz.alis.forked.eu.europa.ec.joinup.sd-dss</groupId>
 			<artifactId>dss-token</artifactId>
 		</dependency>
+		
+		<!-- Choose your implementation -->
+<!-- 		<dependency> -->
+<!-- 			<groupId>cz.alis.forked.eu.europa.ec.joinup.sd-dss</groupId> -->
+<!-- 			<artifactId>dss-utils-apache-commons</artifactId> -->
+<!-- 		</dependency> -->
+		<dependency>
+			<groupId>cz.alis.forked.eu.europa.ec.joinup.sd-dss</groupId>
+			<artifactId>dss-utils-google-guava</artifactId>
+		</dependency>
+		
 	</dependencies>
 
 </project>

@@ -3,7 +3,7 @@
 	<parent>
 		<groupId>cz.alis.forked.eu.europa.ec.joinup.sd-dss</groupId>
 		<artifactId>sd-dss</artifactId>
-		<version>4.7.1.RC1</version>
+		<version>4.8-SNAPSHOT</version>
 	</parent>
 	
 	<artifactId>dss-rest</artifactId>
@@ -18,6 +18,16 @@
 		<dependency>
 			<groupId>cz.alis.forked.eu.europa.ec.joinup.sd-dss</groupId>
 			<artifactId>dss-remote-services</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>cz.alis.forked.eu.europa.ec.joinup.sd-dss</groupId>
+			<artifactId>dss-utils</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>cz.alis.forked.eu.europa.ec.joinup.sd-dss</groupId>
+			<artifactId>dss-utils-apache-commons</artifactId>
+			<scope>test</scope>
 		</dependency>
 	</dependencies>
 	

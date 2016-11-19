@@ -39,8 +39,6 @@ import javax.naming.ldap.LdapName;
 import javax.naming.ldap.Rdn;
 import javax.security.auth.x500.X500Principal;
 
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.ArrayUtils;
 import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1Encoding;
 import org.bouncycastle.asn1.ASN1GeneralizedTime;
@@ -51,10 +49,12 @@ import org.bouncycastle.asn1.ASN1Primitive;
 import org.bouncycastle.asn1.ASN1Sequence;
 import org.bouncycastle.asn1.ASN1UTCTime;
 import org.bouncycastle.asn1.DERBMPString;
+import org.bouncycastle.asn1.DERBitString;
 import org.bouncycastle.asn1.DERIA5String;
 import org.bouncycastle.asn1.DERNull;
 import org.bouncycastle.asn1.DEROctetString;
 import org.bouncycastle.asn1.DERPrintableString;
+import org.bouncycastle.asn1.DERSequence;
 import org.bouncycastle.asn1.DERT61String;
 import org.bouncycastle.asn1.DERT61UTF8String;
 import org.bouncycastle.asn1.DERTaggedObject;
@@ -85,6 +85,7 @@ import org.bouncycastle.x509.extension.X509ExtensionUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import eu.europa.esig.dss.utils.Utils;
 import eu.europa.esig.dss.x509.CertificateToken;
 
 /**
@@ -215,7 +216,7 @@ public final class DSSASN1Utils {
 		} catch (IOException e) {
 			throw new DSSException("Error when computing certificate's extensions.", e);
 		} finally {
-			IOUtils.closeQuietly(input);
+			Utils.closeQuietly(input);
 		}
 	}
 
@@ -359,19 +360,42 @@ public final class DSSASN1Utils {
 	}
 
 	/**
+	 * This method returns SKI bytes from the certificate extension.
+	 *
+	 * @param certificateToken
+	 *            {@code CertificateToken}
+	 * @return ski bytes from the given certificate or null if missing
+	 * @throws DSSException
+	 */
+	public static byte[] getSki(final CertificateToken certificateToken) throws DSSException {
+		return getSki(certificateToken, false);
+	}
+
+	/**
 	 * This method returns SKI bytes from certificate.
 	 *
 	 * @param certificateToken
 	 *            {@code CertificateToken}
+	 * @param computeIfMissing
+	 *            if the extension is missing and computeIfMissing = true, it will compute the SKI value from the Public
+	 *            Key
 	 * @return ski bytes from the given certificate
 	 * @throws DSSException
 	 */
-	public static byte[] getSki(final CertificateToken certificateToken) throws DSSException {
+	public static byte[] getSki(final CertificateToken certificateToken, boolean computeIfMissing) throws DSSException {
 		try {
 			byte[] sKI = certificateToken.getCertificate().getExtensionValue(Extension.subjectKeyIdentifier.getId());
-			ASN1Primitive extension = X509ExtensionUtil.fromExtensionValue(sKI);
-			SubjectKeyIdentifier skiBC = SubjectKeyIdentifier.getInstance(extension);
-			return skiBC.getKeyIdentifier();
+			if (Utils.isArrayNotEmpty(sKI)) {
+				ASN1Primitive extension = X509ExtensionUtil.fromExtensionValue(sKI);
+				SubjectKeyIdentifier skiBC = SubjectKeyIdentifier.getInstance(extension);
+				return skiBC.getKeyIdentifier();
+			} else if (computeIfMissing) {
+				// If extension not present, we compute it from the certificate public key
+				DLSequence seq = (DLSequence) DERSequence.fromByteArray(certificateToken.getPublicKey().getEncoded());
+				DERBitString item = (DERBitString) seq.getObjectAt(1);
+				return DSSUtils.digest(DigestAlgorithm.SHA1, item.getOctets());
+			}
+			return null;
 		} catch (Exception e) {
 			throw new DSSException(e);
 		}
@@ -603,7 +627,7 @@ public final class DSSASN1Utils {
 		Set<String> nonCriticalExtensionOIDs = x509crl.getNonCriticalExtensionOIDs();
 		if ((nonCriticalExtensionOIDs != null) && nonCriticalExtensionOIDs.contains(OID.id_ce_expiredCertsOnCRL.getId())) {
 			byte[] extensionValue = x509crl.getExtensionValue(OID.id_ce_expiredCertsOnCRL.getId());
-			if (ArrayUtils.isNotEmpty(extensionValue)) {
+			if (Utils.isArrayNotEmpty(extensionValue)) {
 				try {
 					ASN1OctetString octetString = (ASN1OctetString) ASN1Primitive.fromByteArray(extensionValue);
 					ASN1GeneralizedTime generalTime = (ASN1GeneralizedTime) ASN1Primitive.fromByteArray(octetString.getOctets());

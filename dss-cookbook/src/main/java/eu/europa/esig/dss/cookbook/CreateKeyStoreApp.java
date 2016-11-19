@@ -11,12 +11,9 @@ import java.util.Date;
 import java.util.Enumeration;
 import java.util.List;
 
-import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.codec.binary.Hex;
-import org.apache.commons.io.IOUtils;
-
 import eu.europa.esig.dss.DSSUtils;
 import eu.europa.esig.dss.DigestAlgorithm;
+import eu.europa.esig.dss.utils.Utils;
 import eu.europa.esig.dss.x509.CertificateToken;
 import eu.europa.esig.dss.x509.KeyStoreCertificateSource;
 
@@ -30,15 +27,15 @@ public class CreateKeyStoreApp {
 
 		KeyStore store = createKeyStore();
 
-		addCertificate(store, "europa1", "src/main/resources/keystore/ec.europa.eu.1.cer");
-		addCertificate(store, "europa2", "src/main/resources/keystore/ec.europa.eu.2.cer");
-		addCertificate(store, "europa3", "src/main/resources/keystore/ec.europa.eu.3.cer");
-		addCertificate(store, "europa4", "src/main/resources/keystore/ec.europa.eu.4.cer");
+		addCertificate(store, "src/main/resources/keystore/ec.europa.eu.1.cer");
+		addCertificate(store, "src/main/resources/keystore/ec.europa.eu.2.cer");
+		addCertificate(store, "src/main/resources/keystore/ec.europa.eu.3.cer");
+		addCertificate(store, "src/main/resources/keystore/ec.europa.eu.4.cer");
 
 		OutputStream fos = new FileOutputStream(KEYSTORE_FILEPATH);
 		store.store(fos, KEYSTORE_PASSWORD.toCharArray());
 
-		IOUtils.closeQuietly(fos);
+		Utils.closeQuietly(fos);
 
 		readKeyStore();
 
@@ -51,17 +48,18 @@ public class CreateKeyStoreApp {
 		}
 	}
 
-	private static void addCertificate(KeyStore store, String alias, String filepath) throws Exception {
+	private static void addCertificate(KeyStore store, String filepath) throws Exception {
 		InputStream fis = new FileInputStream(filepath);
 		CertificateToken europanCert = DSSUtils.loadCertificate(fis);
 		if (europanCert.isExpiredOn(new Date())) {
-			throw new RuntimeException("Alias " + alias + " is expired");
+			throw new RuntimeException("Certificate " + europanCert.getSubjectShortName() + " is expired");
 		}
 		System.out.println("Adding certificate " + filepath);
 		displayCertificateDigests(europanCert);
 
-		store.setCertificateEntry(alias, europanCert.getCertificate());
-		IOUtils.closeQuietly(fis);
+		// DSSID as key (used in the administration screen)
+		store.setCertificateEntry(europanCert.getDSSIdAsString(), europanCert.getCertificate());
+		Utils.closeQuietly(fis);
 	}
 
 	private static void displayCertificateDigests(CertificateToken europanCert) {
@@ -70,12 +68,12 @@ public class CreateKeyStoreApp {
 		System.out.println(europanCert.getSubjectShortName());
 		System.out.println("SHA256 digest (Hex) : " + getPrintableHex(digestSHA256));
 		System.out.println("SHA1 digest (Hex) : " + getPrintableHex(digestSHA1));
-		System.out.println("SHA256 digest (Base64) : " + Base64.encodeBase64String(digestSHA256));
-		System.out.println("SHA1 digest (Base64) : " + Base64.encodeBase64String(digestSHA1));
+		System.out.println("SHA256 digest (Base64) : " + Utils.toBase64(digestSHA256));
+		System.out.println("SHA1 digest (Base64) : " + Utils.toBase64(digestSHA1));
 	}
 
 	private static String getPrintableHex(byte[] digest) {
-		String hexString = Hex.encodeHexString(digest);
+		String hexString = Utils.toHex(digest);
 		// Add space every two characters
 		return hexString.replaceAll("..", "$0 ");
 	}
@@ -96,7 +94,7 @@ public class CreateKeyStoreApp {
 			}
 		}
 
-		IOUtils.closeQuietly(fis);
+		Utils.closeQuietly(fis);
 	}
 
 	private static KeyStore createKeyStore() throws Exception {
@@ -105,7 +103,7 @@ public class CreateKeyStoreApp {
 
 		OutputStream fos = new FileOutputStream(KEYSTORE_FILEPATH);
 		trustStore.store(fos, KEYSTORE_PASSWORD.toCharArray());
-		IOUtils.closeQuietly(fos);
+		Utils.closeQuietly(fos);
 
 		return trustStore;
 	}

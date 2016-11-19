@@ -11,8 +11,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.lang.StringUtils;
 import org.junit.Test;
 
 import eu.europa.esig.dss.DSSUtils;
@@ -21,8 +19,9 @@ import eu.europa.esig.dss.tsl.TSLConditionsForQualifiers;
 import eu.europa.esig.dss.tsl.TSLParserResult;
 import eu.europa.esig.dss.tsl.TSLPointer;
 import eu.europa.esig.dss.tsl.TSLService;
-import eu.europa.esig.dss.tsl.TSLServiceExtension;
 import eu.europa.esig.dss.tsl.TSLServiceProvider;
+import eu.europa.esig.dss.tsl.TSLServiceStatusAndInformationExtensions;
+import eu.europa.esig.dss.utils.Utils;
 import eu.europa.esig.dss.x509.CertificateToken;
 
 public class TSLParserTest {
@@ -37,14 +36,14 @@ public class TSLParserTest {
 		assertEquals("EU", model.getTerritory());
 		assertEquals(115, model.getSequenceNumber());
 		List<TSLPointer> pointers = model.getPointers();
-		assertTrue(CollectionUtils.isNotEmpty(pointers));
+		assertTrue(Utils.isCollectionNotEmpty(pointers));
 		for (TSLPointer tslPointer : pointers) {
-			assertTrue(StringUtils.isNotEmpty(tslPointer.getMimeType()));
-			assertTrue(StringUtils.isNotEmpty(tslPointer.getTerritory()));
-			assertTrue(StringUtils.isNotEmpty(tslPointer.getUrl()));
-			assertTrue(CollectionUtils.isNotEmpty(tslPointer.getPotentialSigners()));
+			assertTrue(Utils.isStringNotEmpty(tslPointer.getMimeType()));
+			assertTrue(Utils.isStringNotEmpty(tslPointer.getTerritory()));
+			assertTrue(Utils.isStringNotEmpty(tslPointer.getUrl()));
+			assertTrue(Utils.isCollectionNotEmpty(tslPointer.getPotentialSigners()));
 		}
-		assertTrue(CollectionUtils.isNotEmpty(model.getDistributionPoints()));
+		assertTrue(Utils.isCollectionNotEmpty(model.getDistributionPoints()));
 	}
 
 	@Test
@@ -93,11 +92,8 @@ public class TSLParserTest {
 		TSLService service = getESTEIDSK2007(serviceProviders);
 		assertNotNull(service);
 
-		List<TSLServiceExtension> extensions = service.getExtensions();
-		assertEquals(1, extensions.size());
-		TSLServiceExtension extension = extensions.get(0);
-
-		List<TSLConditionsForQualifiers> conditionsForQualifiers = extension.getConditionsForQualifiers();
+		TSLServiceStatusAndInformationExtensions latestStatusAndExtensions = service.getStatusAndInformationExtensions().getLatest();
+		List<TSLConditionsForQualifiers> conditionsForQualifiers = latestStatusAndExtensions.getConditionsForQualifiers();
 		assertEquals(1, conditionsForQualifiers.size());
 
 		TSLConditionsForQualifiers qcStatement = getQualificationQCStatement(conditionsForQualifiers);
@@ -117,11 +113,8 @@ public class TSLParserTest {
 		service = getESTEIDSK2007(serviceProviders);
 		assertNotNull(service);
 
-		extensions = service.getExtensions();
-		assertEquals(1, extensions.size());
-		extension = extensions.get(0);
-
-		conditionsForQualifiers = extension.getConditionsForQualifiers();
+		latestStatusAndExtensions = service.getStatusAndInformationExtensions().getLatest();
+		conditionsForQualifiers = latestStatusAndExtensions.getConditionsForQualifiers();
 		assertEquals(2, conditionsForQualifiers.size());
 
 		qcStatement = getQualificationQCStatement(conditionsForQualifiers);
@@ -129,6 +122,23 @@ public class TSLParserTest {
 
 		Condition condition = qcStatement.getCondition();
 		assertTrue(condition.check(certificate));
+	}
+
+	@Test
+	public void getAdditionnalServiceInfo() throws Exception {
+		TSLParser parser = new TSLParser(new FileInputStream(new File("src/test/resources/tsls/tsl-be-v5.xml")));
+		TSLParserResult model = parser.call();
+
+		List<TSLServiceProvider> serviceProviders = model.getServiceProviders();
+		assertEquals(4, serviceProviders.size());
+
+		for (TSLServiceProvider tslServiceProvider : serviceProviders) {
+			if ("Certipost n.v./s.a.".equals(tslServiceProvider.getName())) {
+				List<TSLService> services = tslServiceProvider.getServices();
+				assertEquals(6, services.size());
+			}
+		}
+
 	}
 
 	private TSLConditionsForQualifiers getQualificationQCStatement(List<TSLConditionsForQualifiers> conditionsForQualifiers) {
