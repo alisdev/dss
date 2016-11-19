@@ -268,11 +268,11 @@ abstract class CAdESSignatureExtension implements SignatureExtension<CAdESSignat
 
 			if (encodedTimeStampToken == null) {
 				if (LOG.isDebugEnabled()) {
-					LOG.debug("Message to timestamp is: " + Hex.encodeHexString(messageToTimestamp));
+					LOG.debug("Message to timestamp is: " + Utils.toHex(messageToTimestamp));
 				}
 				byte[] timestampDigest = DSSUtils.digest(timestampDigestAlgorithm, messageToTimestamp);
 				if (LOG.isDebugEnabled()) {
-					LOG.debug("Digested ({}) message to timestamp is {}", new Object[] { timestampDigestAlgorithm, Hex.encodeHexString(timestampDigest) });
+					LOG.debug("Digested ({}) message to timestamp is {}", new Object[] { timestampDigestAlgorithm, Utils.toHex(timestampDigest) });
 				}
 				final TimeStampToken timeStampToken = tspSource.getTimeStampResponse(timestampDigestAlgorithm, timestampDigest);
 
@@ -281,7 +281,7 @@ abstract class CAdESSignatureExtension implements SignatureExtension<CAdESSignat
 				}
 				if (LOG.isDebugEnabled()) {
 					final byte[] messageImprintDigest = timeStampToken.getTimeStampInfo().getMessageImprintDigest();
-					LOG.debug("Digested ({}) message in timestamp is {}", new Object[] { timestampDigestAlgorithm, Hex.encodeHexString(messageImprintDigest) });
+					LOG.debug("Digested ({}) message in timestamp is {}", new Object[] { timestampDigestAlgorithm, Utils.toHex(messageImprintDigest) });
 				}
 				encodedTimeStampToken = timeStampToken.getEncoded();
 			}
