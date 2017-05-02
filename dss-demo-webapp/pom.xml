@@ -7,7 +7,7 @@
 	<parent>
 		<groupId>cz.alis.forked.eu.europa.ec.joinup.sd-dss</groupId>
 		<artifactId>sd-dss</artifactId>
-		<version>4.8-SNAPSHOT</version>
+		<version>4.8.1-RELEASE</version>
 	</parent>
 
 	<artifactId>dss-demo-webapp</artifactId>
@@ -233,6 +233,11 @@
 			<groupId>ch.qos.logback</groupId>
 			<artifactId>logback-classic</artifactId>
 		</dependency>
+		
+		<dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>jul-to-slf4j</artifactId>
+        </dependency>
 
 		<dependency>
 			<groupId>commons-dbcp</groupId>
