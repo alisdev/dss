@@ -60,6 +60,7 @@
 	    <property name="keyStoreType" value="${dss.keystore.type}" />
 	    <property name="keyStoreFilename" value="${dss.keystore.filename}" />
 	    <property name="keyStorePassword" value="${dss.keystore.password}" />
+	    <property name="keyStoreDataFolder" value="${dss.keystore.datafolder}" />
 	</bean>
 
 	<bean id="tslValidationJob" class="eu.europa.esig.dss.tsl.service.TSLValidationJob">
