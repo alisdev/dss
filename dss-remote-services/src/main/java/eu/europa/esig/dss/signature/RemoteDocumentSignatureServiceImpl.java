@@ -28,6 +28,8 @@ import eu.europa.esig.dss.AbstractSignatureParameters;
 import eu.europa.esig.dss.DSSDocument;
 import eu.europa.esig.dss.DSSException;
 import eu.europa.esig.dss.RemoteDocument;
+import eu.europa.esig.dss.RemoteSignatureImageParameters;
+import eu.europa.esig.dss.RemoteSignatureImageTextParameters;
 import eu.europa.esig.dss.RemoteSignatureParameters;
 import eu.europa.esig.dss.SignatureForm;
 import eu.europa.esig.dss.SignatureLevel;

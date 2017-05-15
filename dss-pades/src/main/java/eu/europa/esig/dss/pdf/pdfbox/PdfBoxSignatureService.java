@@ -167,8 +167,12 @@ class PdfBoxSignatureService implements PDFSignatureService {
 			visibleSig.zoom(imgParams.getZoom() - 100); // pdfbox is 0 based
 
 			PDVisibleSigProperties signatureProperties = new PDVisibleSigProperties();
-			signatureProperties.visualSignEnabled(true).setPdVisibleSignature(visibleSig).buildSignature();
-
+			signatureProperties.visualSignEnabled(true).setPdVisibleSignature(visibleSig);
+			if (imgParams.getSignatureReason() != null) // alidev
+				signatureProperties.signatureReason(imgParams.getSignatureReason());
+			if (imgParams.getSignerLocation() != null) // alisdev
+				signatureProperties.signerLocation(imgParams.getSignerLocation());
+			signatureProperties.buildSignature();
 			options.setVisualSignature(signatureProperties);
 			options.setPage(imgParams.getPage() - 1); // DSS-1138
 		} finally {
