@@ -4,7 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<parent>
-		<groupId>eu.europa.ec.joinup.sd-dss</groupId>
+		<groupId>cz.alis.forked.eu.europa.ec.joinup.sd-dss</groupId>
 		<artifactId>sd-dss</artifactId>
 		<version>5.1-SNAPSHOT</version>
 	</parent>
@@ -15,7 +15,7 @@
 	
 	<dependencies>
         <dependency>
-            <groupId>eu.europa.ec.joinup.sd-dss</groupId>
+            <groupId>cz.alis.forked.eu.europa.ec.joinup.sd-dss</groupId>
             <artifactId>dss-document</artifactId>
         </dependency>
         
@@ -29,12 +29,12 @@
 		</dependency>
         
 		<dependency>
-			<groupId>eu.europa.ec.joinup.sd-dss</groupId>
+			<groupId>cz.alis.forked.eu.europa.ec.joinup.sd-dss</groupId>
 			<artifactId>dss-test</artifactId>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
-			<groupId>eu.europa.ec.joinup.sd-dss</groupId>
+			<groupId>cz.alis.forked.eu.europa.ec.joinup.sd-dss</groupId>
 			<artifactId>dss-document</artifactId>
 			<type>test-jar</type>
 			<scope>test</scope>

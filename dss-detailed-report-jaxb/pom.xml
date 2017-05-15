@@ -1,7 +1,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<parent>
-		<groupId>eu.europa.ec.joinup.sd-dss</groupId>
+		<groupId>cz.alis.forked.eu.europa.ec.joinup.sd-dss</groupId>
 		<artifactId>sd-dss</artifactId>
 		<version>5.1-SNAPSHOT</version>
 	</parent>
@@ -12,7 +12,7 @@
 	
 	<dependencies>
 		<dependency>
-			<groupId>eu.europa.ec.joinup.sd-dss</groupId>
+			<groupId>cz.alis.forked.eu.europa.ec.joinup.sd-dss</groupId>
 			<artifactId>dss-common-validation-jaxb</artifactId>
 		</dependency>
 	</dependencies>
@@ -33,7 +33,7 @@
 								</goals>
 								<configuration>
 									<schemaDirectory>src/main/resources/xsd</schemaDirectory>
-									<generatePackage>eu.europa.esig.dss.jaxb.detailedreport</generatePackage>
+									<generatePackage>cz.alis.forked.eu.europa.esig.dss.jaxb.detailedreport</generatePackage>
 									<schemaIncludes>
 										<schemaInclude>DetailedReport.xsd</schemaInclude>
 									</schemaIncludes>
