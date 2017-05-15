@@ -46,6 +46,7 @@ import eu.europa.esig.dss.DSSException;
 import eu.europa.esig.dss.DSSUtils;
 import eu.europa.esig.dss.DigestAlgorithm;
 import eu.europa.esig.dss.SignatureForm;
+import eu.europa.esig.dss.TimestampParameters;
 import eu.europa.esig.dss.cades.CAdESSignatureParameters;
 import eu.europa.esig.dss.cades.CMSUtils;
 import eu.europa.esig.dss.cades.validation.CAdESSignature;
@@ -253,35 +254,38 @@ abstract class CAdESSignatureExtension implements SignatureExtension<CAdESSignat
 
 	protected ASN1Object getTimeStampAttributeValue(TSPSource tspSource, byte[] message, CAdESSignatureParameters parameters) {
 
-		final DigestAlgorithm timestampDigestAlgorithm = parameters.getSignatureTimestampParameters().getDigestAlgorithm();
-		ASN1Object signatureTimeStampValue = getTimeStampAttributeValue(tspSource, message, timestampDigestAlgorithm);
+		ASN1Object signatureTimeStampValue = getTimeStampAttributeValue(tspSource, message, parameters, new Attribute[0]);
 		return signatureTimeStampValue;
 	}
 
-	public static ASN1Object getTimeStampAttributeValue(final TSPSource tspSource, final byte[] messageToTimestamp,
-			final DigestAlgorithm timestampDigestAlgorithm, final Attribute... attributesForTimestampToken) {
+	public static ASN1Object getTimeStampAttributeValue(final TSPSource tspSource, final byte[] messageToTimestamp, CAdESSignatureParameters parameters,
+			final Attribute... attributesForTimestampToken) {
 		try {
+			TimestampParameters signatureTimestampParameters = parameters.getSignatureTimestampParameters();
+			final DigestAlgorithm timestampDigestAlgorithm = signatureTimestampParameters.getDigestAlgorithm();
+			byte[] encodedTimeStampToken = signatureTimestampParameters.getEncodedTimeStampToken();
 
-			if (LOG.isDebugEnabled()) {
-				LOG.debug("Message to timestamp is: " + Utils.toHex(messageToTimestamp));
+			if (encodedTimeStampToken == null) {
+				if (LOG.isDebugEnabled()) {
+					LOG.debug("Message to timestamp is: " + Hex.encodeHexString(messageToTimestamp));
+				}
+				byte[] timestampDigest = DSSUtils.digest(timestampDigestAlgorithm, messageToTimestamp);
+				if (LOG.isDebugEnabled()) {
+					LOG.debug("Digested ({}) message to timestamp is {}", new Object[] { timestampDigestAlgorithm, Hex.encodeHexString(timestampDigest) });
+				}
+				final TimeStampToken timeStampToken = tspSource.getTimeStampResponse(timestampDigestAlgorithm, timestampDigest);
+
+				if (timeStampToken == null) {
+					throw new NullPointerException();
+				}
+				if (LOG.isDebugEnabled()) {
+					final byte[] messageImprintDigest = timeStampToken.getTimeStampInfo().getMessageImprintDigest();
+					LOG.debug("Digested ({}) message in timestamp is {}", new Object[] { timestampDigestAlgorithm, Hex.encodeHexString(messageImprintDigest) });
+				}
+				encodedTimeStampToken = timeStampToken.getEncoded();
 			}
-			byte[] timestampDigest = DSSUtils.digest(timestampDigestAlgorithm, messageToTimestamp);
-			if (LOG.isDebugEnabled()) {
-				LOG.debug("Digested ({}) message to timestamp is {}", new Object[] { timestampDigestAlgorithm, Utils.toHex(timestampDigest) });
-			}
 
-			final TimeStampToken timeStampToken = tspSource.getTimeStampResponse(timestampDigestAlgorithm, timestampDigest);
-
-			if (timeStampToken == null) {
-				throw new NullPointerException();
-			}
-
-			if (LOG.isDebugEnabled()) {
-				final byte[] messageImprintDigest = timeStampToken.getTimeStampInfo().getMessageImprintDigest();
-				LOG.debug("Digested ({}) message in timestamp is {}", new Object[] { timestampDigestAlgorithm, Utils.toHex(messageImprintDigest) });
-			}
-
-			CMSSignedData cmsSignedDataTimeStampToken = new CMSSignedData(timeStampToken.getEncoded());
+			CMSSignedData cmsSignedDataTimeStampToken = new CMSSignedData(encodedTimeStampToken);
 
 			// TODO (27/08/2014): attributesForTimestampToken cannot be null: to be modified
 			if (attributesForTimestampToken != null) {
