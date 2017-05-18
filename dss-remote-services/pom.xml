@@ -12,7 +12,7 @@
   
   <dependencies>
   	<dependency>
-    	<groupId>eu.europa.ec.joinup.sd-dss</groupId>
+    	<groupId>cz.alis.forked.eu.europa.ec.joinup.sd-dss</groupId>
   		<artifactId>dss-xades</artifactId>
   	</dependency>
   	<dependency>
