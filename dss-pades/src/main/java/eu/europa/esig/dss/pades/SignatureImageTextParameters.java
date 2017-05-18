@@ -29,7 +29,7 @@ import java.awt.Font;
  */
 public class SignatureImageTextParameters {
 
-	public static final Font DEFAULT_FONT = new Font("serif", Font.PLAIN, 12);
+	public static final Font DEFAULT_FONT = new Font("serif", Font.PLAIN, 8);
 	public static final Color DEFAUT_TEXT_COLOR = Color.BLACK;
 	public static final Color DEFAULT_BACKGROUND_COLOR = Color.WHITE;
 
