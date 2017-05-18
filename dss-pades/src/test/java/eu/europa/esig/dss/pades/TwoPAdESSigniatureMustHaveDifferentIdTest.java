@@ -7,14 +7,11 @@ import java.util.List;
 
 import org.junit.Assert;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import eu.europa.esig.dss.DSSDocument;
 import eu.europa.esig.dss.FileDocument;
 import eu.europa.esig.dss.SignatureAlgorithm;
 import eu.europa.esig.dss.SignatureLevel;
-import eu.europa.esig.dss.SignaturePackaging;
 import eu.europa.esig.dss.SignatureValue;
 import eu.europa.esig.dss.ToBeSigned;
 import eu.europa.esig.dss.pades.signature.PAdESService;
@@ -29,8 +26,6 @@ import eu.europa.esig.dss.validation.reports.Reports;
 
 public class TwoPAdESSigniatureMustHaveDifferentIdTest {
 
-	private static final Logger logger = LoggerFactory.getLogger(TwoPAdESSigniatureMustHaveDifferentIdTest.class);
-
 	@Test
 	public void test() throws Exception {
 		DSSDocument documentToSign = new FileDocument(new File("src/test/resources/sample.pdf"));
@@ -42,7 +37,6 @@ public class TwoPAdESSigniatureMustHaveDifferentIdTest {
 		signatureParameters.bLevel().setSigningDate(new Date());
 		signatureParameters.setSigningCertificate(privateKeyEntry.getCertificate());
 		signatureParameters.setCertificateChain(privateKeyEntry.getCertificateChain());
-		signatureParameters.setSignaturePackaging(SignaturePackaging.ENVELOPING);
 		signatureParameters.setSignatureLevel(SignatureLevel.PAdES_BASELINE_B);
 		signatureParameters.setLocation("Luxembourg");
 		signatureParameters.setReason("DSS testing");
@@ -58,7 +52,6 @@ public class TwoPAdESSigniatureMustHaveDifferentIdTest {
 		SignedDocumentValidator validator = SignedDocumentValidator.fromDocument(firstSignedDocument);
 		validator.setCertificateVerifier(new CommonCertificateVerifier());
 		Reports reports = validator.validateDocument();
-		String firstId = reports.getSimpleReport().getFirstSignatureId();
 
 		signatureParameters.bLevel().setSigningDate(new Date());
 		dataToSign = service.getDataToSign(firstSignedDocument, signatureParameters);

@@ -57,13 +57,12 @@ import org.bouncycastle.asn1.cms.SignerInfo;
 import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers;
 import org.bouncycastle.asn1.x509.DigestInfo;
 import org.bouncycastle.cert.X509CertificateHolder;
-import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.util.encoders.Hex;
 import org.junit.Before;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import eu.europa.esig.dss.DSSASN1Utils;
 import eu.europa.esig.dss.DSSDocument;
 import eu.europa.esig.dss.DSSUtils;
 import eu.europa.esig.dss.DigestAlgorithm;
@@ -72,7 +71,6 @@ import eu.europa.esig.dss.FileDocument;
 import eu.europa.esig.dss.MimeType;
 import eu.europa.esig.dss.SignatureAlgorithm;
 import eu.europa.esig.dss.SignatureLevel;
-import eu.europa.esig.dss.SignaturePackaging;
 import eu.europa.esig.dss.pades.PAdESSignatureParameters;
 import eu.europa.esig.dss.signature.DocumentSignatureService;
 import eu.europa.esig.dss.test.gen.CertificateService;
@@ -80,6 +78,7 @@ import eu.europa.esig.dss.test.mock.MockPrivateKeyEntry;
 import eu.europa.esig.dss.utils.Utils;
 import eu.europa.esig.dss.validation.CertificateVerifier;
 import eu.europa.esig.dss.validation.CommonCertificateVerifier;
+import eu.europa.esig.dss.x509.CertificateToken;
 
 public class PAdESLevelBTest extends AbstractPAdESTestSignature {
 
@@ -101,7 +100,6 @@ public class PAdESLevelBTest extends AbstractPAdESTestSignature {
 		signatureParameters.bLevel().setSigningDate(new Date());
 		signatureParameters.setSigningCertificate(privateKeyEntry.getCertificate());
 		signatureParameters.setCertificateChain(privateKeyEntry.getCertificateChain());
-		signatureParameters.setSignaturePackaging(SignaturePackaging.ENVELOPING);
 		signatureParameters.setSignatureLevel(SignatureLevel.PAdES_BASELINE_B);
 		signatureParameters.setLocation("Luxembourg");
 		signatureParameters.setReason("DSS testing");
@@ -126,8 +124,6 @@ public class PAdESLevelBTest extends AbstractPAdESTestSignature {
 				byte[] signedContent = pdSignature.getSignedContent(byteArray);
 
 				logger.info("Byte range : " + Arrays.toString(pdSignature.getByteRange()));
-
-				// IOUtils.write(contents, new FileOutputStream("sig.p7s"));
 
 				ASN1InputStream asn1sInput = new ASN1InputStream(contents);
 				ASN1Sequence asn1Seq = (ASN1Sequence) asn1sInput.readObject();
@@ -159,6 +155,9 @@ public class PAdESLevelBTest extends AbstractPAdESTestSignature {
 				ASN1Set signerInfosAsn1 = signedData.getSignerInfos();
 				logger.info("SIGNER INFO ASN1 : " + signerInfosAsn1.toString());
 				SignerInfo signedInfo = SignerInfo.getInstance(ASN1Sequence.getInstance(signerInfosAsn1.getObjectAt(0)));
+
+				ASN1Set unauthenticatedAttributes = signedInfo.getUnauthenticatedAttributes();
+				assertNull(unauthenticatedAttributes);
 
 				ASN1Set authenticatedAttributeSet = signedInfo.getAuthenticatedAttributes();
 				logger.info("AUTHENTICATED ATTR : " + authenticatedAttributeSet);
@@ -246,26 +245,6 @@ public class PAdESLevelBTest extends AbstractPAdESTestSignature {
 		}
 	}
 
-	private boolean isSubset(byte[] encoded, byte[] arrayToFind) {
-
-		for (int i = 0; i < encoded.length; i++) {
-			boolean found = false;
-			int j;
-			for (j = 0; j < arrayToFind.length; j++) {
-				if (encoded[i] == arrayToFind[j]) {
-					found = true;
-				} else {
-					break;
-				}
-			}
-			if (found && j == arrayToFind.length - 1) {
-				return true;
-			}
-		}
-
-		return false;
-	}
-
 	private List<X509Certificate> extractCertificates(SignedData signedData) throws Exception {
 		ASN1Set certificates = signedData.getCertificates();
 		logger.info("CERTIFICATES (" + certificates.size() + ") : " + certificates);
@@ -275,9 +254,9 @@ public class PAdESLevelBTest extends AbstractPAdESTestSignature {
 			ASN1Sequence seqCertif = ASN1Sequence.getInstance(certificates.getObjectAt(i));
 
 			X509CertificateHolder certificateHolder = new X509CertificateHolder(seqCertif.getEncoded());
-			X509Certificate certificate = new JcaX509CertificateConverter().setProvider(BouncyCastleProvider.PROVIDER_NAME).getCertificate(certificateHolder);
+			CertificateToken certificate = DSSASN1Utils.getCertificate(certificateHolder);
 
-			foundCertificates.add(certificate);
+			foundCertificates.add(certificate.getCertificate());
 		}
 		return foundCertificates;
 	}

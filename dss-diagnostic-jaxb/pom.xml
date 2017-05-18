@@ -3,7 +3,7 @@
 	<parent>
 		<groupId>cz.alis.forked.eu.europa.ec.joinup.sd-dss</groupId>
 		<artifactId>sd-dss</artifactId>
-		<version>4.8.1-RELEASE</version>
+		<version>5.1-SNAPSHOT</version>
 	</parent>
 
 	<artifactId>dss-diagnostic-jaxb</artifactId>
@@ -33,7 +33,7 @@
 								</goals>
 								<configuration>
 									<schemaDirectory>src/main/resources/xsd</schemaDirectory>
-									<generatePackage>eu.europa.esig.dss.jaxb.diagnostic</generatePackage>
+									<generatePackage>cz.alis.forked.eu.europa.esig.dss.jaxb.diagnostic</generatePackage>
 									<schemaIncludes>
 										<schemaInclude>DiagnosticData.xsd</schemaInclude>
 									</schemaIncludes>
@@ -43,6 +43,19 @@
 									<specVersion>2.1</specVersion>
 									<encoding>UTF-8</encoding>
 									<locale>en</locale>
+									
+									<extension>true</extension>
+					                <args>
+					                    <arg>-Xxew</arg>
+					                    <arg>-Xxew:instantiate lazy</arg>
+					                </args>
+									 <plugins>
+					                    <plugin>
+					                        <groupId>com.github.jaxb-xew-plugin</groupId> <!-- Allows to add XmlElementWrapper -->
+					                        <artifactId>jaxb-xew-plugin</artifactId>
+                        					<version>1.7</version>
+					                    </plugin>
+					                </plugins>
 								</configuration>
 							</execution>
 						</executions>

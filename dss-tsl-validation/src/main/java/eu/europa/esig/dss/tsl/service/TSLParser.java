@@ -27,10 +27,8 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.Callable;
 
 import javax.xml.bind.JAXBContext;
@@ -78,6 +76,7 @@ import eu.europa.esig.jaxb.tsl.ExtensionsListType;
 import eu.europa.esig.jaxb.tsl.InternationalNamesType;
 import eu.europa.esig.jaxb.tsl.MultiLangNormStringType;
 import eu.europa.esig.jaxb.tsl.NextUpdateType;
+import eu.europa.esig.jaxb.tsl.NonEmptyMultiLangURIListType;
 import eu.europa.esig.jaxb.tsl.NonEmptyMultiLangURIType;
 import eu.europa.esig.jaxb.tsl.NonEmptyURIListType;
 import eu.europa.esig.jaxb.tsl.ObjectFactory;
@@ -138,12 +137,22 @@ public class TSLParser implements Callable<TSLParserResult> {
 		TSLParserResult tslModel = new TSLParserResult();
 		tslModel.setTerritory(getTerritory(tsl));
 		tslModel.setSequenceNumber(getSequenceNumber(tsl));
+		tslModel.setVersion(getVersion(tsl));
 		tslModel.setIssueDate(getIssueDate(tsl));
 		tslModel.setNextUpdateDate(getNextUpdate(tsl));
 		tslModel.setDistributionPoints(getDistributionPoints(tsl));
 		tslModel.setPointers(getMachineProcessableTSLPointers(tsl));
 		tslModel.setServiceProviders(getServiceProviders(tsl));
+		tslModel.setEnglishSchemeInformationURIs(getEnglishSchemeInformationURIs(tsl));
 		return tslModel;
+	}
+
+	private int getVersion(TrustStatusListType tsl) {
+		BigInteger tslVersionIdentifier = tsl.getSchemeInformation().getTSLVersionIdentifier();
+		if (tslVersionIdentifier != null) {
+			return tslVersionIdentifier.intValue();
+		}
+		return -1;
 	}
 
 	private int getSequenceNumber(TrustStatusListType tsl) {
@@ -319,8 +328,6 @@ public class TSLParser implements Callable<TSLParserResult> {
 		TSLService service = new TSLService();
 		TSPServiceInformationType serviceInfo = tslService.getServiceInformation();
 		service.setName(getEnglishOrFirst(serviceInfo.getServiceName()));
-		service.setType(serviceInfo.getServiceTypeIdentifier());
-		service.setCertificateUrls(extractCertificatesUrls(serviceInfo));
 		service.setCertificates(extractCertificates(serviceInfo.getServiceDigitalIdentity()));
 		service.setStatusAndInformationExtensions(getStatusHistory(tslService));
 		return service;
@@ -332,6 +339,7 @@ public class TSLParser implements Callable<TSLParserResult> {
 		TSPServiceInformationType serviceInfo = tslService.getServiceInformation();
 
 		TSLServiceStatusAndInformationExtensions status = new TSLServiceStatusAndInformationExtensions();
+		status.setType(serviceInfo.getServiceTypeIdentifier());
 		status.setStatus(serviceInfo.getServiceStatus());
 		ExtensionsListType serviceInformationExtensions = serviceInfo.getServiceInformationExtensions();
 		if (serviceInformationExtensions != null) {
@@ -346,6 +354,7 @@ public class TSLParser implements Callable<TSLParserResult> {
 		if (tslService.getServiceHistory() != null && Utils.isCollectionNotEmpty(tslService.getServiceHistory().getServiceHistoryInstance())) {
 			for (ServiceHistoryInstanceType serviceHistory : tslService.getServiceHistory().getServiceHistoryInstance()) {
 				TSLServiceStatusAndInformationExtensions statusHistory = new TSLServiceStatusAndInformationExtensions();
+				statusHistory.setType(serviceHistory.getServiceTypeIdentifier());
 				statusHistory.setStatus(serviceHistory.getServiceStatus());
 				ExtensionsListType serviceHistoryInformationExtensions = serviceHistory.getServiceInformationExtensions();
 				if (serviceHistoryInformationExtensions != null) {
@@ -361,24 +370,6 @@ public class TSLParser implements Callable<TSLParserResult> {
 		}
 
 		return statusHistoryList;
-	}
-
-	private List<String> extractCertificatesUrls(TSPServiceInformationType serviceInfo) {
-		Set<String> certificateUrls = new HashSet<String>();
-		if ((serviceInfo.getSchemeServiceDefinitionURI() != null) && Utils.isCollectionNotEmpty(serviceInfo.getSchemeServiceDefinitionURI().getURI())) {
-			List<NonEmptyMultiLangURIType> uris = serviceInfo.getSchemeServiceDefinitionURI().getURI();
-			for (NonEmptyMultiLangURIType uri : uris) {
-				String value = uri.getValue();
-				if (isCertificateURI(value)) {
-					certificateUrls.add(value);
-				}
-			}
-		}
-		return new ArrayList<String>(certificateUrls);
-	}
-
-	private boolean isCertificateURI(String value) {
-		return Utils.endsWithIgnoreCase(value, ".crt");
 	}
 
 	@SuppressWarnings("rawtypes")
@@ -469,18 +460,21 @@ public class TSLParser implements Callable<TSLParserResult> {
 		return qualifiers;
 	}
 
-	private Condition getCondition(CriteriaListType criteriaList) {
+	protected Condition getCondition(CriteriaListType criteriaList) {
 		MatchingCriteriaIndicator matchingCriteriaIndicator = MatchingCriteriaIndicator.valueOf(criteriaList.getAssert());
 		CompositeCondition condition = new CriteriaListCondition(matchingCriteriaIndicator);
+
 		addKeyUsageConditionsIfPresent(criteriaList.getKeyUsage(), condition);
 		addPolicyIdConditionsIfPresent(criteriaList.getPolicySet(), condition);
 		addCriteriaListConditionsIfPresent(criteriaList.getCriteriaList(), condition);
+
 		return condition;
 	}
 
-	private void addPolicyIdConditionsIfPresent(List<PoliciesListType> policySet, CompositeCondition condition) {
+	private void addPolicyIdConditionsIfPresent(List<PoliciesListType> policySet, CompositeCondition criteriaCondition) {
 		if (Utils.isCollectionNotEmpty(policySet)) {
 			for (PoliciesListType policiesListType : policySet) {
+				CompositeCondition condition = new CompositeCondition();
 				for (ObjectIdentifierType oidType : policiesListType.getPolicyIdentifier()) {
 					IdentifierType identifier = oidType.getIdentifier();
 					String id = identifier.getValue();
@@ -492,27 +486,28 @@ public class TSLParser implements Callable<TSLParserResult> {
 
 					condition.addChild(new PolicyIdCondition(id));
 				}
+				criteriaCondition.addChild(condition);
 			}
 		}
 	}
 
-	private void addKeyUsageConditionsIfPresent(List<KeyUsageType> keyUsages, CompositeCondition condition) {
+	private void addKeyUsageConditionsIfPresent(List<KeyUsageType> keyUsages, CompositeCondition criteriaCondition) {
 		if (Utils.isCollectionNotEmpty(keyUsages)) {
 			for (KeyUsageType keyUsageType : keyUsages) {
+				CompositeCondition condition = new CompositeCondition();
 				for (KeyUsageBitType keyUsageBit : keyUsageType.getKeyUsageBit()) {
 					condition.addChild(new KeyUsageCondition(keyUsageBit.getName(), keyUsageBit.isValue()));
 				}
+				criteriaCondition.addChild(condition);
 			}
 		}
 	}
 
 	private void addCriteriaListConditionsIfPresent(List<CriteriaListType> criteriaList, CompositeCondition condition) {
 		if (Utils.isCollectionNotEmpty(criteriaList)) {
-			CompositeCondition compositeConditions = new CompositeCondition();
 			for (CriteriaListType criteriaListType : criteriaList) {
-				compositeConditions.addChild(getCondition(criteriaListType));
+				condition.addChild(getCondition(criteriaListType));
 			}
-			condition.addChild(compositeConditions);
 		}
 	}
 
@@ -571,6 +566,19 @@ public class TSLParser implements Callable<TSLParserResult> {
 			}
 		}
 		return names.getName().get(0).getValue();
+	}
+
+	private List<String> getEnglishSchemeInformationURIs(TrustStatusListType tsl) {
+		List<String> result = new ArrayList<String>();
+		NonEmptyMultiLangURIListType schemeInformationURI = tsl.getSchemeInformation().getSchemeInformationURI();
+		if (schemeInformationURI != null && Utils.isCollectionNotEmpty(schemeInformationURI.getURI())) {
+			for (NonEmptyMultiLangURIType uri : schemeInformationURI.getURI()) {
+				if (ENGLISH_LANGUAGE.equals(uri.getLang())) {
+					result.add(uri.getValue());
+				}
+			}
+		}
+		return result;
 	}
 
 }

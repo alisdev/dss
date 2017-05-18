@@ -30,9 +30,14 @@ public class RemoteSignatureParameters extends AbstractSerializableSignaturePara
 	private List<RemoteCertificate> certificateChain = new ArrayList<RemoteCertificate>();
 
 	/**
-	 * The document to be signed
+	 * The documents to be signed
 	 */
-	private RemoteDocument detachedContent;
+	private List<RemoteDocument> detachedContents;
+
+    /**
+     * This attribute is used to create visible signature in PAdES form
+     */
+    private RemoteSignatureImageParameters imageParameters;
 
     /**
      * This attribute is used to create visible signature in PAdES form
@@ -40,9 +45,9 @@ public class RemoteSignatureParameters extends AbstractSerializableSignaturePara
     private RemoteSignatureImageParameters imageParameters;
 
 	/**
-	 *	ASiC Underlying
+	 * ASiC Container type
 	 */
-	private SignatureForm underlyingASiCForm;
+	private ASiCContainerType asicContainerType;
 
 	public RemoteSignatureParameters() {
 	}
@@ -63,20 +68,20 @@ public class RemoteSignatureParameters extends AbstractSerializableSignaturePara
 		this.certificateChain = certificateChain;
 	}
 
-	public RemoteDocument getDetachedContent() {
-		return detachedContent;
+	public List<RemoteDocument> getDetachedContents() {
+		return detachedContents;
 	}
 
-	public void setDetachedContent(RemoteDocument detachedContent) {
-		this.detachedContent = detachedContent;
+	public void setDetachedContents(List<RemoteDocument> detachedContents) {
+		this.detachedContents = detachedContents;
 	}
 
-	public SignatureForm getUnderlyingASiCForm() {
-		return underlyingASiCForm;
+	public ASiCContainerType getAsicContainerType() {
+		return asicContainerType;
 	}
 
-	public void setUnderlyingASiCForm(SignatureForm underlyingASiCForm) {
-		this.underlyingASiCForm = underlyingASiCForm;
+	public void setAsicContainerType(ASiCContainerType asicContainerType) {
+		this.asicContainerType = asicContainerType;
 	}
 
     public RemoteSignatureImageParameters getImageParameters() {

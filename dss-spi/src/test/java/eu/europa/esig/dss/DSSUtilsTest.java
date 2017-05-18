@@ -81,7 +81,11 @@ public class DSSUtilsTest {
 		// CertificateToken certificate3 =
 		// DSSUtils.loadCertificate(base64StringToBase64Binary);
 		// assertNotNull(certificate3);
+	}
 
+	@Test(expected = DSSException.class)
+	public void loadCertificateDoesNotThrowNullPointerExceptionWhenProvidedNonCertificateFile() throws Exception {
+		DSSUtils.loadCertificate(new ByteArrayInputStream("test".getBytes("UTF-8")));
 	}
 
 	@Test
@@ -93,13 +97,13 @@ public class DSSUtilsTest {
 		assertTrue(DSSUtils.isPEM(new ByteArrayInputStream(convertToPEM.getBytes())));
 
 		CertificateToken certificate = DSSUtils.loadCertificate(convertToPEM.getBytes());
-		assertTrue(certificate.equals(certificateWithAIA));
+		assertEquals(certificate,certificateWithAIA);
 
 		byte[] certDER = DSSUtils.convertToDER(convertToPEM);
 		assertFalse(DSSUtils.isPEM(new ByteArrayInputStream(certDER)));
 
 		CertificateToken certificate2 = DSSUtils.loadCertificate(certDER);
-		assertTrue(certificate2.equals(certificateWithAIA));
+		assertEquals(certificate2,certificateWithAIA);
 	}
 
 	@Test

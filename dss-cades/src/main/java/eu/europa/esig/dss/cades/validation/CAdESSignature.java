@@ -121,6 +121,7 @@ import eu.europa.esig.dss.DSSDocument;
 import eu.europa.esig.dss.DSSException;
 import eu.europa.esig.dss.DSSUtils;
 import eu.europa.esig.dss.DigestAlgorithm;
+import eu.europa.esig.dss.DigestDocument;
 import eu.europa.esig.dss.EncryptionAlgorithm;
 import eu.europa.esig.dss.SignatureAlgorithm;
 import eu.europa.esig.dss.SignatureForm;
@@ -140,6 +141,7 @@ import eu.europa.esig.dss.validation.CommitmentType;
 import eu.europa.esig.dss.validation.DefaultAdvancedSignature;
 import eu.europa.esig.dss.validation.OCSPRef;
 import eu.europa.esig.dss.validation.SignatureCryptographicVerification;
+import eu.europa.esig.dss.validation.SignaturePolicyProvider;
 import eu.europa.esig.dss.validation.SignatureProductionPlace;
 import eu.europa.esig.dss.validation.TimestampReference;
 import eu.europa.esig.dss.validation.TimestampReferenceCategory;
@@ -383,7 +385,7 @@ public class CAdESSignature extends DefaultAdvancedSignature {
 			final Attribute signingCertificateAttributeV1) {
 
 		final DigestAlgorithm digestAlgorithm = DigestAlgorithm.SHA1;
-		final byte[] signingTokenCertHash = DSSUtils.digest(digestAlgorithm, signingCertificateValidity.getCertificateToken().getEncoded());
+		final byte[] signingTokenCertHash = signingCertificateValidity.getCertificateToken().getDigest(digestAlgorithm);
 		if (LOG.isDebugEnabled()) {
 			LOG.debug("Candidate Certificate Hash {} with algorithm {}", Utils.toHex(signingTokenCertHash), digestAlgorithm.getName());
 		}
@@ -436,8 +438,7 @@ public class CAdESSignature extends DefaultAdvancedSignature {
 				final DigestAlgorithm digestAlgorithm = DigestAlgorithm.forOID(algorithmId);
 				signingCertificateValidity.setDigestAlgorithm(digestAlgorithm);
 				if (digestAlgorithm != lastDigestAlgorithm) {
-
-					signingTokenCertHash = DSSUtils.digest(digestAlgorithm, signingCertificateValidity.getCertificateToken().getEncoded());
+					signingTokenCertHash = signingCertificateValidity.getCertificateToken().getDigest(digestAlgorithm);
 					if (LOG.isDebugEnabled()) {
 						LOG.debug("Candidate Certificate Hash {} with algorithm {}", Utils.toHex(signingTokenCertHash), digestAlgorithm.getName());
 					}
@@ -491,57 +492,31 @@ public class CAdESSignature extends DefaultAdvancedSignature {
 		return getCertificateSource().getCertificates();
 	}
 
-	/**
-	 * 31 ETSI TS 101 733 V2.2.1 (2013-04)
-	 * 5.8.1 signature-policy-identifier The present document mandates that for
-	 * CAdES-EPES, a reference to the signature policy is included in the
-	 * signedData. This reference is explicitly identified. A signature policy
-	 * defines the rules for creation and validation of an electronic signature,
-	 * and is included as a signed attribute with every Explicit Policy-based
-	 * Electronic Signature. The signature-policy-identifier shall be a signed
-	 * attribute.
-	 * The following object identifier identifies the
-	 * signature-policy-identifier attribute: ... id-aa-ets-sigPolicyId OBJECT
-	 * IDENTIFIER ::= { iso(1) member-body(2) us(840) rsadsi(113549) pkcs(1)
-	 * pkcs9(9) smime(16) id-aa(2) 15 } signature-policy-identifier attribute
-	 * values have ASN.1 type SignaturePolicyIdentifier: ...
-	 * SignaturePolicyIdentifier ::=CHOICE{ ...... signaturePolicyId .........
-	 * SignaturePolicyId, ...... signaturePolicyImplied ....
-	 * SignaturePolicyImplied -- not used in this version}
-	 * ... SignaturePolicyId ::= SEQUENCE { ...... sigPolicyId .........
-	 * SigPolicyId, ...... sigPolicyHash ....... SigPolicyHash, ......
-	 * sigPolicyQualifiers . SEQUENCE SIZE (1..MAX) OF SigPolicyQualifierInfo
-	 * OPTIONAL}
-	 * ... SignaturePolicyImplied ::= NULL
-	 * NOTE: {@code SignaturePolicyImplied} -- not used in this version
-	 *
-	 * @return
-	 */
 	@Override
-	public SignaturePolicy getPolicyId() {
-
+	public void checkSignaturePolicy(SignaturePolicyProvider signaturePolicyProvider) {
 		final AttributeTable attributes = signerInformation.getSignedAttributes();
 		if (attributes == null) {
-			return null;
+			return;
 		}
 
 		final Attribute attribute = attributes.get(PKCSObjectIdentifiers.id_aa_ets_sigPolicyId);
 		if (attribute == null) {
-			return null;
+			return;
 		}
 
 		final ASN1Encodable attrValue = attribute.getAttrValues().getObjectAt(0);
 		if (attrValue instanceof DERNull) {
-			return null;
+			return;
 		}
 
 		final SignaturePolicyId sigPolicy = SignaturePolicyId.getInstance(attrValue);
 		if (sigPolicy == null) {
-			return null;
+			return;
 		}
 
 		final String policyId = sigPolicy.getSigPolicyId().getId();
-		final SignaturePolicy signaturePolicy = new SignaturePolicy(policyId);
+
+		signaturePolicy = new SignaturePolicy(policyId);
 
 		final OtherHashAlgAndValue hashAlgAndValue = sigPolicy.getSigPolicyHash();
 
@@ -552,29 +527,31 @@ public class CAdESSignature extends DefaultAdvancedSignature {
 
 		final ASN1OctetString digestValue = hashAlgAndValue.getHashValue();
 		final byte[] digestValueBytes = digestValue.getOctets();
-		signaturePolicy.setDigestValue(digestValueBytes);
+		signaturePolicy.setDigestValue(Utils.toBase64(digestValueBytes));
 
 		final SigPolicyQualifiers sigPolicyQualifiers = sigPolicy.getSigPolicyQualifiers();
 		if (sigPolicyQualifiers == null) {
-			return signaturePolicy;
-		}
-		for (int ii = 0; ii < sigPolicyQualifiers.size(); ii++) {
+			signaturePolicy.setPolicyContent(signaturePolicyProvider.getSignaturePolicyById(policyId));
+		} else {
+			for (int ii = 0; ii < sigPolicyQualifiers.size(); ii++) {
+				try {
+					final SigPolicyQualifierInfo policyQualifierInfo = sigPolicyQualifiers.getInfoAt(ii);
+					final ASN1ObjectIdentifier policyQualifierInfoId = policyQualifierInfo.getSigPolicyQualifierId();
+					final String policyQualifierInfoValue = policyQualifierInfo.getSigQualifier().toString();
 
-			final SigPolicyQualifierInfo policyQualifierInfo = sigPolicyQualifiers.getInfoAt(ii);
-			final ASN1ObjectIdentifier policyQualifierInfoId = policyQualifierInfo.getSigPolicyQualifierId();
-			final String policyQualifierInfoValue = policyQualifierInfo.getSigQualifier().toString();
-
-			if (PKCSObjectIdentifiers.id_spq_ets_unotice.equals(policyQualifierInfoId)) {
-
-				signaturePolicy.setNotice(policyQualifierInfoValue);
-			} else if (PKCSObjectIdentifiers.id_spq_ets_uri.equals(policyQualifierInfoId)) {
-
-				signaturePolicy.setUrl(policyQualifierInfoValue);
-			} else {
-				LOG.error("Unknown signature policy qualifier id: " + policyQualifierInfoId + " with value: " + policyQualifierInfoValue);
+					if (PKCSObjectIdentifiers.id_spq_ets_unotice.equals(policyQualifierInfoId)) {
+						signaturePolicy.setNotice(policyQualifierInfoValue);
+					} else if (PKCSObjectIdentifiers.id_spq_ets_uri.equals(policyQualifierInfoId)) {
+						signaturePolicy.setUrl(policyQualifierInfoValue);
+						signaturePolicy.setPolicyContent(signaturePolicyProvider.getSignaturePolicyByUrl(policyQualifierInfoValue));
+					} else {
+						LOG.error("Unknown signature policy qualifier id: " + policyQualifierInfoId + " with value: " + policyQualifierInfoValue);
+					}
+				} catch (Exception e) {
+					LOG.error("Unable to read SigPolicyQualifierInfo " + ii, e.getMessage());
+				}
 			}
 		}
-		return signaturePolicy;
 	}
 
 	@Override
@@ -777,8 +754,8 @@ public class CAdESSignature extends DefaultAdvancedSignature {
 			final String[] strings = claimedRoles.toArray(new String[claimedRoles.size()]);
 			return strings;
 		} catch (Exception e) {
-
-			throw new DSSException("Error when dealing with claimed signer roles: [" + attrValue.toString() + "]", e);
+			LOG.error("Error when dealing with claimed signer roles: [" + attrValue.toString() + "]", e);
+			return null;
 		}
 	}
 
@@ -833,8 +810,8 @@ public class CAdESSignature extends DefaultAdvancedSignature {
 			}
 			return roles;
 		} catch (Exception e) {
-
-			throw new DSSException("Error when dealing with certified signer roles: [" + asn1EncodableAttrValue.toString() + "]", e);
+			LOG.error("Error when dealing with certified signer roles: [" + asn1EncodableAttrValue.toString() + "]", e);
+			return null;
 		}
 	}
 
@@ -953,7 +930,7 @@ public class CAdESSignature extends DefaultAdvancedSignature {
 			default:
 				throw new DSSException("TimeStampType not supported : " + timestampType);
 			}
-			timestampedTimestamps.add(timestampToken.getDSSId().asXmlId());
+			timestampedTimestamps.add(timestampToken.getDSSIdAsString());
 		}
 	}
 
@@ -1098,31 +1075,25 @@ public class CAdESSignature extends DefaultAdvancedSignature {
 	}
 
 	@Override
-	public SignatureCryptographicVerification checkSignatureIntegrity() {
-
+	public void checkSignatureIntegrity() {
 		if (signatureCryptographicVerification != null) {
-			return signatureCryptographicVerification;
+			return;
 		}
 		signatureCryptographicVerification = new SignatureCryptographicVerification();
 		try {
 
-			final List<CertificateValidity> certificateValidityList = getCertificateValidityList();
-			if (certificateValidityList.size() == 0) {
-
+			final CertificateValidity bestCandidate = getTheBestCandidate();
+			if (bestCandidate == null) {
 				signatureCryptographicVerification.setErrorMessage("There is no signing certificate within the signature.");
-				return signatureCryptographicVerification;
+				return;
 			}
 			boolean detachedSignature = isDetachedSignature();
 			final SignerInformation signerInformationToCheck;
 			if (detachedSignature) {
-
 				if (Utils.isCollectionEmpty(detachedContents)) {
-
-					if (certificateValidityList.size() > 0) {
-						candidatesForSigningCertificate.setTheCertificateValidity(certificateValidityList.get(0));
-					}
+					candidatesForSigningCertificate.setTheCertificateValidity(bestCandidate);
 					signatureCryptographicVerification.setErrorMessage("Detached file not found!");
-					return signatureCryptographicVerification;
+					return;
 				}
 				signerInformationToCheck = recreateSignerInformation();
 			} else {
@@ -1166,7 +1137,6 @@ public class CAdESSignature extends DefaultAdvancedSignature {
 			signatureCryptographicVerification.setErrorMessage(e.getMessage());
 		}
 		LOG.debug(" - RESULT: " + signatureCryptographicVerification.toString());
-		return signatureCryptographicVerification;
 	}
 
 	/**
@@ -1180,10 +1150,16 @@ public class CAdESSignature extends DefaultAdvancedSignature {
 	private SignerInformation recreateSignerInformation() throws CMSException, IOException {
 
 		final DSSDocument dssDocument = detachedContents.get(0); // only one element for CAdES Signature
-		final InputStream inputStream = dssDocument.openStream();
-		final CMSTypedStream signedContent = new CMSTypedStream(inputStream);
-		final CMSSignedDataParser cmsSignedDataParser = new CMSSignedDataParser(new BcDigestCalculatorProvider(), signedContent, cmsSignedData.getEncoded());
-		cmsSignedDataParser.getSignedContent().drain(); // Closes the stream
+		CMSSignedDataParser cmsSignedDataParser = null;
+		if (dssDocument instanceof DigestDocument) {
+			cmsSignedDataParser = new CMSSignedDataParser(new PrecomputedDigestCalculatorProvider((DigestDocument) dssDocument), cmsSignedData.getEncoded());
+		} else {
+			final InputStream inputStream = dssDocument.openStream();
+			final CMSTypedStream signedContent = new CMSTypedStream(inputStream);
+			cmsSignedDataParser = new CMSSignedDataParser(new BcDigestCalculatorProvider(), signedContent, cmsSignedData.getEncoded());
+			cmsSignedDataParser.getSignedContent().drain(); // Closes the stream
+		}
+
 		final SignerId signerId = signerInformation.getSID();
 		final SignerInformation signerInformationToCheck = cmsSignedDataParser.getSignerInfos().get(signerId);
 		return signerInformationToCheck;
@@ -1193,11 +1169,8 @@ public class CAdESSignature extends DefaultAdvancedSignature {
 		return (cmsSignedData.getSignedContent() == null) || (cmsSignedData.getSignedContent().getContent() == null) ? true : false;
 	}
 
-	private List<CertificateValidity> getCertificateValidityList() {
-
-		final List<CertificateValidity> certificateValidityList;
+	private CertificateValidity getTheBestCandidate() {
 		if (providedSigningCertificateToken == null) {
-
 			// To determine the signing certificate it is necessary to browse
 			// through all candidates found before.
 			candidatesForSigningCertificate = getCandidatesForSigningCertificate();
@@ -1207,8 +1180,7 @@ public class CAdESSignature extends DefaultAdvancedSignature {
 			final CertificateValidity certificateValidity = new CertificateValidity(providedSigningCertificateToken);
 			candidatesForSigningCertificate.add(certificateValidity);
 		}
-		certificateValidityList = candidatesForSigningCertificate.getCertificateValidityList();
-		return certificateValidityList;
+		return candidatesForSigningCertificate.getTheBestCandidate();
 	}
 
 	@Override

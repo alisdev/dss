@@ -30,12 +30,14 @@ import java.util.List;
 public class TSLParserResult {
 
 	private int sequenceNumber;
+	private int version;
 	private String territory;
 	private Date issueDate;
 	private Date nextUpdateDate;
 	private List<TSLPointer> pointers;
 	private List<TSLServiceProvider> serviceProviders;
 	private List<String> distributionPoints;
+	private List<String> englishSchemeInformationURIs;
 
 	public int getSequenceNumber() {
 		return sequenceNumber;
@@ -43,6 +45,14 @@ public class TSLParserResult {
 
 	public void setSequenceNumber(int sequenceNumber) {
 		this.sequenceNumber = sequenceNumber;
+	}
+
+	public int getVersion() {
+		return version;
+	}
+
+	public void setVersion(int version) {
+		this.version = version;
 	}
 
 	public String getTerritory() {
@@ -91,6 +101,14 @@ public class TSLParserResult {
 
 	public void setDistributionPoints(List<String> distributionPoints) {
 		this.distributionPoints = distributionPoints;
+	}
+
+	public List<String> getEnglishSchemeInformationURIs() {
+		return englishSchemeInformationURIs;
+	}
+
+	public void setEnglishSchemeInformationURIs(List<String> englishSchemeInformationURIs) {
+		this.englishSchemeInformationURIs = englishSchemeInformationURIs;
 	}
 
 }

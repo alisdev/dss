@@ -29,10 +29,10 @@ import java.util.Set;
 import eu.europa.esig.dss.DigestAlgorithm;
 import eu.europa.esig.dss.EncryptionAlgorithm;
 import eu.europa.esig.dss.jaxb.diagnostic.XmlCertificate;
+import eu.europa.esig.dss.jaxb.diagnostic.XmlContainerInfo;
 import eu.europa.esig.dss.jaxb.diagnostic.XmlSignature;
-import eu.europa.esig.dss.jaxb.diagnostic.XmlTimestampType;
-import eu.europa.esig.dss.jaxb.diagnostic.XmlTrustedServiceProviderType;
-import eu.europa.esig.dss.jaxb.diagnostic.XmlUsedCertificates;
+import eu.europa.esig.dss.jaxb.diagnostic.XmlTimestamp;
+import eu.europa.esig.dss.jaxb.diagnostic.XmlTrustedList;
 import eu.europa.esig.dss.utils.Utils;
 import eu.europa.esig.dss.x509.TimestampType;
 
@@ -62,7 +62,7 @@ public class DiagnosticData {
 	 */
 	public List<String> getSignatureIdList() {
 		List<String> signatureIds = new ArrayList<String>();
-		List<XmlSignature> signatures = diagnosticData.getSignature();
+		List<XmlSignature> signatures = diagnosticData.getSignatures();
 		if (Utils.isCollectionNotEmpty(signatures)) {
 			for (XmlSignature xmlSignature : signatures) {
 				signatureIds.add(xmlSignature.getId());
@@ -395,40 +395,6 @@ public class DiagnosticData {
 	}
 
 	/**
-	 * This method returns the associated TSPServiceName.
-	 *
-	 * @param dssCertificateId
-	 *            DSS certificate identifier to be checked
-	 * @return TSPServiceName
-	 */
-	public String getCertificateTSPServiceName(final String dssCertificateId) {
-		CertificateWrapper certificate = getUsedCertificateByIdNullSafe(dssCertificateId);
-		return certificate.getCertificateTSPServiceName();
-	}
-
-	public String getCertificateTSPServiceType(XmlCertificate xmlCertificate) {
-		List<XmlTrustedServiceProviderType> trustedServiceProviders = xmlCertificate.getTrustedServiceProvider();
-		if (Utils.isCollectionNotEmpty(trustedServiceProviders)) {
-			for (XmlTrustedServiceProviderType trustedServiceProvider : trustedServiceProviders) {
-				return trustedServiceProvider.getTSPServiceType(); // TODO correct ?? return first one
-			}
-		}
-		return Utils.EMPTY_STRING;
-	}
-
-	/**
-	 * This method indicates if the associated trusted list is well signed.
-	 *
-	 * @param dssCertificateId
-	 *            DSS certificate identifier to be checked
-	 * @return TSPServiceName
-	 */
-	public boolean isCertificateRelatedTSLWellSigned(final String dssCertificateId) {
-		CertificateWrapper certificate = getUsedCertificateByIdNullSafe(dssCertificateId);
-		return certificate.isCertificateRelatedTSLWellSigned();
-	}
-
-	/**
 	 * This method returns the revocation source for the given certificate.
 	 *
 	 * @param dssCertificateId
@@ -520,7 +486,7 @@ public class DiagnosticData {
 				}
 			}
 		}
-		return new TimestampWrapper(new XmlTimestampType());
+		return new TimestampWrapper(new XmlTimestamp());
 	}
 
 	public CertificateWrapper getUsedCertificateByIdNullSafe(String id) {
@@ -550,7 +516,7 @@ public class DiagnosticData {
 	public List<SignatureWrapper> getSignatures() {
 		if (foundSignatures == null) {
 			foundSignatures = new ArrayList<SignatureWrapper>();
-			List<XmlSignature> xmlSignatures = diagnosticData.getSignature();
+			List<XmlSignature> xmlSignatures = diagnosticData.getSignatures();
 			if (Utils.isCollectionNotEmpty(xmlSignatures)) {
 				for (XmlSignature xmlSignature : xmlSignatures) {
 					foundSignatures.add(new SignatureWrapper(xmlSignature));
@@ -563,9 +529,9 @@ public class DiagnosticData {
 	public List<CertificateWrapper> getUsedCertificates() {
 		if (usedCertificates == null) {
 			usedCertificates = new ArrayList<CertificateWrapper>();
-			XmlUsedCertificates xmlCertificates = diagnosticData.getUsedCertificates();
-			if ((xmlCertificates != null) && Utils.isCollectionNotEmpty(xmlCertificates.getCertificate())) {
-				for (XmlCertificate certificate : xmlCertificates.getCertificate()) {
+			List<XmlCertificate> xmlCertificates = diagnosticData.getUsedCertificates();
+			if (Utils.isCollectionNotEmpty(xmlCertificates)) {
+				for (XmlCertificate certificate : xmlCertificates) {
 					usedCertificates.add(new CertificateWrapper(certificate));
 				}
 			}
@@ -662,6 +628,62 @@ public class DiagnosticData {
 
 	public eu.europa.esig.dss.jaxb.diagnostic.DiagnosticData getJaxbModel() {
 		return diagnosticData;
+	}
+
+	public boolean isContainerInfoPresent() {
+		return diagnosticData.getContainerInfo() != null;
+	}
+
+	public String getContainerType() {
+		XmlContainerInfo containerInfo = diagnosticData.getContainerInfo();
+		if (containerInfo != null) {
+			return containerInfo.getContainerType();
+		}
+		return null;
+	}
+
+	public String getZipComment() {
+		XmlContainerInfo containerInfo = diagnosticData.getContainerInfo();
+		if (containerInfo != null) {
+			return containerInfo.getZipComment();
+		}
+		return null;
+	}
+
+	public boolean isMimetypeFilePresent() {
+		XmlContainerInfo containerInfo = diagnosticData.getContainerInfo();
+		if (containerInfo != null) {
+			return containerInfo.isMimeTypeFilePresent();
+		}
+		return false;
+	}
+
+	public String getMimetypeFileContent() {
+		XmlContainerInfo containerInfo = diagnosticData.getContainerInfo();
+		if (containerInfo != null) {
+			return containerInfo.getMimeTypeContent();
+		}
+		return null;
+	}
+
+	public XmlContainerInfo getContainerInfo() {
+		return diagnosticData.getContainerInfo();
+	}
+
+	public List<XmlTrustedList> getTrustedLists() {
+		return diagnosticData.getTrustedLists();
+	}
+
+	public XmlTrustedList getListOfTrustedLists() {
+		return diagnosticData.getListOfTrustedLists();
+	}
+
+	public String getLOTLCountryCode() {
+		XmlTrustedList listOfTrustedLists = diagnosticData.getListOfTrustedLists();
+		if (listOfTrustedLists != null) {
+			return listOfTrustedLists.getCountryCode();
+		}
+		return null;
 	}
 
 }

@@ -1,8 +1,10 @@
 package eu.europa.esig.dss.cades.extension;
 
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.junit.Test;
@@ -57,9 +59,9 @@ public class ExtendToCAdESLtaTest {
 		CAdESSignatureParameters parameters = new CAdESSignatureParameters();
 		parameters.setSignatureLevel(SignatureLevel.CAdES_BASELINE_LTA);
 		DSSDocument detachedContent = new FileDocument(DETACHED_DOC_PATH);
-		parameters.setDetachedContent(detachedContent);
+		parameters.setDetachedContents(Arrays.asList(detachedContent));
 		DSSDocument extendDocument = service.extendDocument(new FileDocument(SIGNED_DOC_PATH), parameters);
-
+		assertNotNull(extendDocument);
 	}
 
 }

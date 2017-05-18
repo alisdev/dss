@@ -35,7 +35,7 @@ public class GoogleGuavaUtils implements IUtils {
 
 	@Override
 	public boolean isStringBlank(String text) {
-		return Strings.isNullOrEmpty(text) || CharMatcher.WHITESPACE.matchesAllOf(text);
+		return Strings.isNullOrEmpty(text) || CharMatcher.whitespace().matchesAllOf(text);
 	}
 
 	@Override
@@ -65,7 +65,7 @@ public class GoogleGuavaUtils implements IUtils {
 
 	@Override
 	public boolean isStringDigits(String text) {
-		return !Strings.isNullOrEmpty(text) && CharMatcher.DIGIT.matchesAllOf(text);
+		return !Strings.isNullOrEmpty(text) && CharMatcher.digit().matchesAllOf(text);
 	}
 
 	@Override
@@ -175,6 +175,9 @@ public class GoogleGuavaUtils implements IUtils {
 	@Override
 	@SuppressWarnings("rawtypes")
 	public int collectionSize(Collection collection) {
+		if (collection == null) {
+			return 0;
+		}
 		return collection.size();
 	}
 
@@ -190,7 +193,7 @@ public class GoogleGuavaUtils implements IUtils {
 
 	@Override
 	public byte[] fromBase64(String base64) {
-		return BaseEncoding.base64().decode(CharMatcher.WHITESPACE.removeFrom(base64));
+		return BaseEncoding.base64().decode(CharMatcher.whitespace().removeFrom(base64));
 	}
 
 	@Override

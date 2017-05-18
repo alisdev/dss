@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import org.apache.commons.codec.binary.Hex;
 import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1Object;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
@@ -142,7 +143,7 @@ abstract class CAdESSignatureExtension implements SignatureExtension<CAdESSignat
 		for (SignerInformation signerInformation : signerInformationCollection) {
 
 			final CAdESSignature cadesSignature = new CAdESSignature(cmsSignedData, signerInformation);
-			cadesSignature.setDetachedContents(parameters.getDetachedContent());
+			cadesSignature.setDetachedContents(parameters.getDetachedContents());
 			assertSignatureValid(cadesSignature, parameters);
 			final SignerInformation newSignerInformation = extendCMSSignature(cmsSignedData, signerInformation, parameters);
 			newSignerInformationList.add(newSignerInformation);
@@ -176,7 +177,7 @@ abstract class CAdESSignatureExtension implements SignatureExtension<CAdESSignat
 			if (lastSignerInformation == signerInformation) {
 
 				final CAdESSignature cadesSignature = new CAdESSignature(cmsSignedData, signerInformation);
-				cadesSignature.setDetachedContents(parameters.getDetachedContent());
+				cadesSignature.setDetachedContents(parameters.getDetachedContents());
 				assertSignatureValid(cadesSignature, parameters);
 				final SignerInformation newSignerInformation = extendCMSSignature(cmsSignedData, signerInformation, parameters);
 				newSignerInformationList.add(newSignerInformation);
@@ -208,7 +209,7 @@ abstract class CAdESSignatureExtension implements SignatureExtension<CAdESSignat
 
 		if (!SignatureForm.PAdES.equals(parameters.getSignatureLevel().getSignatureForm())) {
 
-			final SignatureCryptographicVerification signatureCryptographicVerification = cadesSignature.checkSignatureIntegrity();
+			final SignatureCryptographicVerification signatureCryptographicVerification = cadesSignature.getSignatureCryptographicVerification();
 			if (!signatureCryptographicVerification.isSignatureIntact()) {
 
 				final String errorMessage = signatureCryptographicVerification.getErrorMessage();
@@ -260,7 +261,6 @@ abstract class CAdESSignatureExtension implements SignatureExtension<CAdESSignat
 
 	public static ASN1Object getTimeStampAttributeValue(final TSPSource tspSource, final byte[] messageToTimestamp, CAdESSignatureParameters parameters,
 			final Attribute... attributesForTimestampToken) {
-
 		try {
 			TimestampParameters signatureTimestampParameters = parameters.getSignatureTimestampParameters();
 			final DigestAlgorithm timestampDigestAlgorithm = signatureTimestampParameters.getDigestAlgorithm();
@@ -268,11 +268,11 @@ abstract class CAdESSignatureExtension implements SignatureExtension<CAdESSignat
 
 			if (encodedTimeStampToken == null) {
 				if (LOG.isDebugEnabled()) {
-					LOG.debug("Message to timestamp is: " + Utils.toHex(messageToTimestamp));
+					LOG.debug("Message to timestamp is: " + Hex.encodeHexString(messageToTimestamp));
 				}
 				byte[] timestampDigest = DSSUtils.digest(timestampDigestAlgorithm, messageToTimestamp);
 				if (LOG.isDebugEnabled()) {
-					LOG.debug("Digested ({}) message to timestamp is {}", new Object[] { timestampDigestAlgorithm, Utils.toHex(timestampDigest) });
+					LOG.debug("Digested ({}) message to timestamp is {}", new Object[] { timestampDigestAlgorithm, Hex.encodeHexString(timestampDigest) });
 				}
 				final TimeStampToken timeStampToken = tspSource.getTimeStampResponse(timestampDigestAlgorithm, timestampDigest);
 
@@ -281,7 +281,7 @@ abstract class CAdESSignatureExtension implements SignatureExtension<CAdESSignat
 				}
 				if (LOG.isDebugEnabled()) {
 					final byte[] messageImprintDigest = timeStampToken.getTimeStampInfo().getMessageImprintDigest();
-					LOG.debug("Digested ({}) message in timestamp is {}", new Object[] { timestampDigestAlgorithm, Utils.toHex(messageImprintDigest) });
+					LOG.debug("Digested ({}) message in timestamp is {}", new Object[] { timestampDigestAlgorithm, Hex.encodeHexString(messageImprintDigest) });
 				}
 				encodedTimeStampToken = timeStampToken.getEncoded();
 			}
@@ -297,6 +297,10 @@ abstract class CAdESSignatureExtension implements SignatureExtension<CAdESSignat
 					final ASN1ObjectIdentifier attrType = attributeToAdd.getAttrType();
 					final ASN1Encodable objectAt = attributeToAdd.getAttrValues().getObjectAt(0);
 					unsignedAttributes = unsignedAttributes.add(attrType, objectAt);
+				}
+				// Unsigned attributes cannot be empty (RFC 5652 5.3)
+				if (unsignedAttributes.size() == 0) {
+					unsignedAttributes = null;
 				}
 				final SignerInformation newSignerInformation = SignerInformation.replaceUnsignedAttributes(signerInformation, unsignedAttributes);
 				final List<SignerInformation> signerInformationList = new ArrayList<SignerInformation>();
