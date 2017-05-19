@@ -39,11 +39,6 @@ public class RemoteSignatureParameters extends AbstractSerializableSignaturePara
      */
     private RemoteSignatureImageParameters imageParameters;
 
-    /**
-     * This attribute is used to create visible signature in PAdES form
-     */
-    private RemoteSignatureImageParameters imageParameters;
-
 	/**
 	 * ASiC Container type
 	 */
