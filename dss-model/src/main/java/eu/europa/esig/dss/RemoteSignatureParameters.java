@@ -34,7 +34,7 @@ public class RemoteSignatureParameters extends AbstractSerializableSignaturePara
 	 */
 	private List<RemoteDocument> detachedContents;
 
-    /**
+	/**
      * This attribute is used to create visible signature in PAdES form
      */
     private RemoteSignatureImageParameters imageParameters;
