@@ -13,12 +13,17 @@ import eu.europa.esig.dss.DSSUtils;
 import eu.europa.esig.dss.InMemoryDocument;
 import eu.europa.esig.dss.RemoteCertificate;
 import eu.europa.esig.dss.RemoteDocument;
+import eu.europa.esig.dss.RemoteSignatureImageParameters;
+import eu.europa.esig.dss.RemoteSignatureImageTextParameters;
 import eu.europa.esig.dss.RemoteSignatureParameters;
 import eu.europa.esig.dss.SignatureForm;
 import eu.europa.esig.dss.asic.ASiCWithCAdESSignatureParameters;
 import eu.europa.esig.dss.asic.ASiCWithXAdESSignatureParameters;
 import eu.europa.esig.dss.cades.CAdESSignatureParameters;
 import eu.europa.esig.dss.pades.PAdESSignatureParameters;
+import eu.europa.esig.dss.pades.SignatureImageParameters;
+import eu.europa.esig.dss.pades.SignatureImageTextParameters;
+import eu.europa.esig.dss.pades.SignatureImageTextParameters.SignerPosition;
 import eu.europa.esig.dss.utils.Utils;
 import eu.europa.esig.dss.x509.CertificateToken;
 import eu.europa.esig.dss.xades.XAdESSignatureParameters;
@@ -58,6 +63,7 @@ public class AbstractRemoteSignatureServiceImpl {
 			case PAdES:
 				PAdESSignatureParameters padesParams = new PAdESSignatureParameters();
 				padesParams.setSignatureSize(9472 * 2); // double reserved space for signature
+				fillPAdESVisibleSignatureParameters(padesParams, remoteParameters);
 				parameters = padesParams;
 				break;
 			case XAdES:
@@ -121,6 +127,33 @@ public class AbstractRemoteSignatureServiceImpl {
 			return dssDocument;
 		}
 		return null;
+	}
+
+	/**
+	 * @author coufal - ALIS
+	 * @param padesParams
+	 * @param remoteParameters
+	 */
+	private void fillPAdESVisibleSignatureParameters(PAdESSignatureParameters padesParams, RemoteSignatureParameters remoteParameters) {
+		RemoteSignatureImageParameters remoteImageParameters = remoteParameters.getImageParameters();
+		if (remoteImageParameters != null) {
+			SignatureImageParameters imageParameters = new SignatureImageParameters();
+			imageParameters.setPage(remoteImageParameters.getPage());
+			imageParameters.setxAxis(remoteImageParameters.getxAxis());
+			imageParameters.setyAxis(remoteImageParameters.getyAxis());
+			imageParameters.setSignatureReason(remoteImageParameters.getSignatureReason());
+			imageParameters.setSignerLocation(remoteImageParameters.getSignerLocation());
+			RemoteSignatureImageTextParameters remoteTextParameters = remoteImageParameters.getTextParameters();
+			if (remoteTextParameters != null) {
+				RemoteSignatureImageTextParameters.SignerPosition signerNamePosition = remoteTextParameters.getSignerNamePosition();
+				SignatureImageTextParameters textParameters = new SignatureImageTextParameters();
+				if (signerNamePosition != null)
+					textParameters.setSignerNamePosition(SignerPosition.valueOf(signerNamePosition.name()));
+				textParameters.setText(remoteTextParameters.getText());
+				imageParameters.setTextParameters(textParameters);
+				padesParams.setImageParameters(imageParameters);
+			}
+		}
 	}
 
 }
