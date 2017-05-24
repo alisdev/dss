@@ -548,13 +548,13 @@
 	</dependencyManagement>
 
 	<distributionManagement>
-		<repository>
-			<id>cefdigital-nexus</id>
-			<url>https://ec.europa.eu/cefdigital/artifact/content/repositories/esignaturedss</url>
+    	<repository>
+			<id>nexus-alis</id>
+			<url>>https://nexus.alis.cz/content/repositories/thirdparty</url>
 		</repository>
 		<snapshotRepository>
-			<id>cefdigital-nexus</id>
-			<url>https://ec.europa.eu/cefdigital/artifact/content/repositories/esignaturedss-snapshots</url>
+			<id>nexus-alis</id>
+			<url>https://nexus.alis.cz/content/repositories/thirdparty-snapshots</url>
 		</snapshotRepository>
 	</distributionManagement>
 	
