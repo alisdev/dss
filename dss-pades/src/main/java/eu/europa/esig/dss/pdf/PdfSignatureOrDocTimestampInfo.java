@@ -38,6 +38,8 @@ public interface PdfSignatureOrDocTimestampInfo {
 
 	String getReason();
 
+	String getFilter();
+
 	String getSubFilter();
 
 	Date getSigningDate();
@@ -56,6 +58,8 @@ public interface PdfSignatureOrDocTimestampInfo {
 	 */
 	byte[] getOriginalBytes();
 
+	PdfDict getSignatureDictionary();
+
 	PdfDssDict getDssDictionary();
 
 	String uniqueId();
@@ -68,4 +72,7 @@ public interface PdfSignatureOrDocTimestampInfo {
 	Set<PdfSignatureOrDocTimestampInfo> getOuterSignatures();
 
 	boolean isTimestamp();
+
+	boolean isCoverAllOriginalBytes();
+
 }

@@ -28,6 +28,8 @@ import java.util.Date;
 import java.util.List;
 
 import org.bouncycastle.asn1.ASN1GeneralizedTime;
+import org.bouncycastle.asn1.isismtt.ISISMTTObjectIdentifiers;
+import org.bouncycastle.asn1.isismtt.ocsp.CertHash;
 import org.bouncycastle.asn1.ocsp.OCSPObjectIdentifiers;
 import org.bouncycastle.asn1.x509.Extension;
 import org.bouncycastle.cert.ocsp.BasicOCSPResp;
@@ -46,6 +48,8 @@ import org.slf4j.LoggerFactory;
 import eu.europa.esig.dss.DSSException;
 import eu.europa.esig.dss.DSSRevocationUtils;
 import eu.europa.esig.dss.DSSUtils;
+import eu.europa.esig.dss.Digest;
+import eu.europa.esig.dss.DigestAlgorithm;
 import eu.europa.esig.dss.SignatureAlgorithm;
 import eu.europa.esig.dss.x509.CertificateToken;
 import eu.europa.esig.dss.x509.RevocationToken;
@@ -58,7 +62,7 @@ import eu.europa.esig.dss.x509.crl.CRLReasonEnum;
 @SuppressWarnings("serial")
 public class OCSPToken extends RevocationToken {
 
-	private static final Logger logger = LoggerFactory.getLogger(OCSPToken.class);
+	private static final Logger LOG = LoggerFactory.getLogger(OCSPToken.class);
 
 	private CertificateID certId;
 
@@ -90,13 +94,14 @@ public class OCSPToken extends RevocationToken {
 		if (basicOCSPResp != null) {
 			this.productionDate = basicOCSPResp.getProducedAt();
 			this.signatureAlgorithm = SignatureAlgorithm.forOID(basicOCSPResp.getSignatureAlgOID().getId());
-			extractArchiveCutOff();
 
 			SingleResp bestSingleResp = getBestSingleResp(basicOCSPResp, certId);
 			if (bestSingleResp != null) {
 				this.thisUpdate = bestSingleResp.getThisUpdate();
 				this.nextUpdate = bestSingleResp.getNextUpdate();
 				extractStatusInfo(bestSingleResp);
+				extractArchiveCutOff(bestSingleResp);
+				extractCertHashExtension(bestSingleResp);
 			}
 		}
 	}
@@ -122,7 +127,7 @@ public class OCSPToken extends RevocationToken {
 		try {
 			responses = basicOCSPResp.getResponses();
 		} catch (Exception e) {
-			logger.error("Unable to parse the responses object from OCSP", e);
+			LOG.error("Unable to parse the responses object from OCSP", e);
 			extraInfo.infoOCSPException("Unable to parse the responses object from OCSP : " + e.getMessage());
 		}
 		return responses;
@@ -131,13 +136,13 @@ public class OCSPToken extends RevocationToken {
 	private void extractStatusInfo(SingleResp bestSingleResp) {
 		CertificateStatus certStatus = bestSingleResp.getCertStatus();
 		if (CertificateStatus.GOOD == certStatus) {
-			if (logger.isInfoEnabled()) {
-				logger.info("OCSP status is good");
+			if (LOG.isInfoEnabled()) {
+				LOG.info("OCSP status is good");
 			}
 			status = true;
 		} else if (certStatus instanceof RevokedStatus) {
-			if (logger.isInfoEnabled()) {
-				logger.info("OCSP status revoked");
+			if (LOG.isInfoEnabled()) {
+				LOG.info("OCSP status revoked");
 			}
 			final RevokedStatus revokedStatus = (RevokedStatus) certStatus;
 			status = false;
@@ -148,23 +153,49 @@ public class OCSPToken extends RevocationToken {
 			}
 			reason = CRLReasonEnum.fromInt(reasonId).name();
 		} else if (certStatus instanceof UnknownStatus) {
-			if (logger.isInfoEnabled()) {
-				logger.info("OCSP status unknown");
+			if (LOG.isInfoEnabled()) {
+				LOG.info("OCSP status unknown");
 			}
 			reason = CRLReasonEnum.unknow.name();
 		} else {
-			logger.info("OCSP certificate status: " + certStatus);
+			LOG.info("OCSP certificate status: " + certStatus);
 		}
 	}
 
-	private void extractArchiveCutOff() {
-		Extension extension = basicOCSPResp.getExtension(OCSPObjectIdentifiers.id_pkix_ocsp_archive_cutoff);
+	private void extractArchiveCutOff(SingleResp bestSingleResp) {
+		Extension extension = bestSingleResp.getExtension(OCSPObjectIdentifiers.id_pkix_ocsp_archive_cutoff);
 		if (extension != null) {
 			ASN1GeneralizedTime archiveCutOffAsn1 = (ASN1GeneralizedTime) extension.getParsedValue();
 			try {
 				archiveCutOff = archiveCutOffAsn1.getDate();
 			} catch (ParseException e) {
-				logger.warn("Unable to extract id_pkix_ocsp_archive_cutoff : " + e.getMessage());
+				LOG.warn("Unable to extract id_pkix_ocsp_archive_cutoff : " + e.getMessage());
+			}
+		}
+	}
+
+	/**
+	 * This method extracts the CertHash extension if present
+	 * 
+	 * Common PKI Part 4: Operational Protocols
+	 * 3.1.2 Common PKI Private OCSP Extensions
+	 * 
+	 * CertHash ::= SEQUENCE {
+	 * hashAlgorithm AlgorithmIdentifier,
+	 * certificateHash OCTET STRING }
+	 * 
+	 * @param bestSingleResp
+	 *            the related SingleResponse
+	 */
+	private void extractCertHashExtension(SingleResp bestSingleResp) {
+		Extension extension = bestSingleResp.getExtension(ISISMTTObjectIdentifiers.id_isismtt_at_certHash);
+		if (extension != null) {
+			try {
+				CertHash asn1CertHash = CertHash.getInstance(extension.getParsedValue());
+				DigestAlgorithm digestAlgo = DigestAlgorithm.forOID(asn1CertHash.getHashAlgorithm().getAlgorithm().getId());
+				certHash = new Digest(digestAlgo, asn1CertHash.getCertificateHash());
+			} catch (Exception e) {
+				LOG.warn("Unable to extract id_isismtt_at_certHash : " + e.getMessage());
 			}
 		}
 	}
@@ -245,12 +276,6 @@ public class OCSPToken extends RevocationToken {
 		return signatureValid;
 	}
 
-	/**
-	 * This method returns the DSS abbreviation of the certificate. It is used
-	 * for debugging purpose.
-	 *
-	 * @return
-	 */
 	@Override
 	public String getAbbreviation() {
 		return "OCSPToken[" + (basicOCSPResp == null ? "?" : DSSUtils.formatInternal(basicOCSPResp.getProducedAt())) + ", signedBy="

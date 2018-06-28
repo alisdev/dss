@@ -5,6 +5,7 @@ import java.util.List;
 
 import eu.europa.esig.dss.DigestAlgorithm;
 import eu.europa.esig.dss.EncryptionAlgorithm;
+import eu.europa.esig.dss.MaskGenerationFunction;
 import eu.europa.esig.dss.jaxb.diagnostic.XmlBasicSignature;
 import eu.europa.esig.dss.jaxb.diagnostic.XmlChainItem;
 import eu.europa.esig.dss.jaxb.diagnostic.XmlSigningCertificate;
@@ -87,6 +88,21 @@ public abstract class AbstractTokenProxy implements TokenProxy {
 	}
 
 	@Override
+	public String getMaskGenerationFunctionUsedToSignThisToken() {
+		XmlBasicSignature basicSignature = getCurrentBasicSignature();
+		if (basicSignature != null) {
+			return basicSignature.getMaskGenerationFunctionUsedToSignThisToken();
+		}
+		return Utils.EMPTY_STRING;
+	}
+
+	@Override
+	public MaskGenerationFunction getMaskGenerationFunction() {
+		String mgf = getMaskGenerationFunctionUsedToSignThisToken();
+		return MaskGenerationFunction.valueOf(mgf);
+	}
+
+	@Override
 	public EncryptionAlgorithm getEncryptionAlgorithm() {
 		String encryptionAlgoUsedToSignThisToken = getEncryptionAlgoUsedToSignThisToken();
 		return EncryptionAlgorithm.forName(encryptionAlgoUsedToSignThisToken, null);
@@ -130,15 +146,6 @@ public abstract class AbstractTokenProxy implements TokenProxy {
 		XmlSigningCertificate currentSigningCertificate = getCurrentSigningCertificate();
 		if (currentSigningCertificate != null) {
 			return currentSigningCertificate.getId();
-		}
-		return Utils.EMPTY_STRING;
-	}
-
-	@Override
-	public String getSigningCertificateSigned() {
-		XmlSigningCertificate currentSigningCertificate = getCurrentSigningCertificate();
-		if (currentSigningCertificate != null) {
-			return currentSigningCertificate.getSigned();
 		}
 		return Utils.EMPTY_STRING;
 	}

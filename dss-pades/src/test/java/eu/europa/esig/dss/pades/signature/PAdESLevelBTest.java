@@ -26,9 +26,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.InputStream;
 import java.math.BigInteger;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
@@ -68,16 +66,10 @@ import eu.europa.esig.dss.DSSUtils;
 import eu.europa.esig.dss.DigestAlgorithm;
 import eu.europa.esig.dss.EncryptionAlgorithm;
 import eu.europa.esig.dss.FileDocument;
-import eu.europa.esig.dss.MimeType;
-import eu.europa.esig.dss.SignatureAlgorithm;
 import eu.europa.esig.dss.SignatureLevel;
 import eu.europa.esig.dss.pades.PAdESSignatureParameters;
 import eu.europa.esig.dss.signature.DocumentSignatureService;
-import eu.europa.esig.dss.test.gen.CertificateService;
-import eu.europa.esig.dss.test.mock.MockPrivateKeyEntry;
 import eu.europa.esig.dss.utils.Utils;
-import eu.europa.esig.dss.validation.CertificateVerifier;
-import eu.europa.esig.dss.validation.CommonCertificateVerifier;
 import eu.europa.esig.dss.x509.CertificateToken;
 
 public class PAdESLevelBTest extends AbstractPAdESTestSignature {
@@ -87,35 +79,36 @@ public class PAdESLevelBTest extends AbstractPAdESTestSignature {
 	private DocumentSignatureService<PAdESSignatureParameters> service;
 	private PAdESSignatureParameters signatureParameters;
 	private DSSDocument documentToSign;
-	private MockPrivateKeyEntry privateKeyEntry;
 
 	@Before
 	public void init() throws Exception {
 		documentToSign = new FileDocument(new File("src/test/resources/sample.pdf"));
 
-		CertificateService certificateService = new CertificateService();
-		privateKeyEntry = certificateService.generateCertificateChain(SignatureAlgorithm.RSA_SHA256);
-
 		signatureParameters = new PAdESSignatureParameters();
 		signatureParameters.bLevel().setSigningDate(new Date());
-		signatureParameters.setSigningCertificate(privateKeyEntry.getCertificate());
-		signatureParameters.setCertificateChain(privateKeyEntry.getCertificateChain());
+		signatureParameters.setSigningCertificate(getSigningCert());
+		signatureParameters.setCertificateChain(getCertificateChain());
 		signatureParameters.setSignatureLevel(SignatureLevel.PAdES_BASELINE_B);
 		signatureParameters.setLocation("Luxembourg");
 		signatureParameters.setReason("DSS testing");
 		signatureParameters.setContactInfo("Jira");
 
-		CertificateVerifier certificateVerifier = new CommonCertificateVerifier();
-		service = new PAdESService(certificateVerifier);
+		service = new PAdESService(getCompleteCertificateVerifier());
 	}
 
 	@Override
 	protected void onDocumentSigned(byte[] byteArray) {
 
-		try {
-			InputStream inputStream = new ByteArrayInputStream(byteArray);
+		byte[] originalBinaries = DSSUtils.toByteArray(documentToSign);
 
-			PDDocument document = PDDocument.load(inputStream);
+		for (int i = 0; i < originalBinaries.length; i++) {
+			byte originalByte = originalBinaries[i];
+			byte signedByte = byteArray[i];
+			assertEquals(originalByte, signedByte);
+		}
+
+		try (PDDocument document = PDDocument.load(byteArray)) {
+
 			List<PDSignature> signatures = document.getSignatureDictionaries();
 			assertEquals(1, signatures.size());
 
@@ -237,8 +230,6 @@ public class PAdESLevelBTest extends AbstractPAdESTestSignature {
 				Utils.closeQuietly(asn1sInput);
 			}
 
-			Utils.closeQuietly(inputStream);
-			document.close();
 		} catch (Exception e) {
 			logger.error(e.getMessage(), e);
 			fail(e.getMessage());
@@ -272,28 +263,13 @@ public class PAdESLevelBTest extends AbstractPAdESTestSignature {
 	}
 
 	@Override
-	protected MimeType getExpectedMime() {
-		return MimeType.PDF;
-	}
-
-	@Override
-	protected boolean isBaselineT() {
-		return false;
-	}
-
-	@Override
-	protected boolean isBaselineLTA() {
-		return false;
-	}
-
-	@Override
 	protected DSSDocument getDocumentToSign() {
 		return documentToSign;
 	}
 
 	@Override
-	protected MockPrivateKeyEntry getPrivateKeyEntry() {
-		return privateKeyEntry;
+	protected String getSigningAlias() {
+		return GOOD_USER;
 	}
 
 }

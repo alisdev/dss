@@ -21,12 +21,11 @@
 package eu.europa.esig.dss.pdf.pdfbox;
 
 import org.apache.pdfbox.pdmodel.interactive.digitalsignature.PDSignature;
-import org.bouncycastle.cms.CMSSignedData;
-import org.bouncycastle.tsp.TimeStampToken;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import eu.europa.esig.dss.DSSException;
+import eu.europa.esig.dss.pdf.PdfDict;
 import eu.europa.esig.dss.pdf.PdfDocTimestampInfo;
 import eu.europa.esig.dss.pdf.PdfDssDict;
 import eu.europa.esig.dss.validation.SignatureCryptographicVerification;
@@ -40,7 +39,7 @@ import eu.europa.esig.dss.x509.TimestampType;
  */
 class PdfBoxDocTimestampInfo extends PdfBoxCMSInfo implements PdfDocTimestampInfo {
 
-	private static final Logger logger = LoggerFactory.getLogger(PdfBoxDocTimestampInfo.class);
+	private static final Logger LOG = LoggerFactory.getLogger(PdfBoxDocTimestampInfo.class);
 
 	private final TimestampToken timestampToken;
 
@@ -52,23 +51,25 @@ class PdfBoxDocTimestampInfo extends PdfBoxCMSInfo implements PdfDocTimestampInf
 	 *            the DSS dictionary
 	 * @param cms
 	 *            the CMS (CAdES) bytes
+	 * @param coverCompleteRevision
+	 *            true if the signature covers all bytes
 	 * @param isArchiveTimestamp
+	 *            true if the timestamp is an archive timestamp
 	 * @param inputStream
 	 *            the stream of the whole signed document
 	 * @throws DSSException
 	 */
-	PdfBoxDocTimestampInfo(CertificatePool validationCertPool, PDSignature signature, PdfDssDict dssDictionary, byte[] cms, byte[] signedContent,
-			boolean isArchiveTimestamp) throws DSSException {
-		super(signature, dssDictionary, cms, signedContent);
+	PdfBoxDocTimestampInfo(CertificatePool validationCertPool, PDSignature signature, PdfDict dictionary, PdfDssDict dssDictionary, byte[] cms,
+			byte[] signedContent, boolean coverCompleteRevision, boolean isArchiveTimestamp) throws DSSException {
+		super(signature, dictionary, dssDictionary, cms, signedContent, coverCompleteRevision);
 		try {
-			TimeStampToken timeStampToken = new TimeStampToken(new CMSSignedData(cms));
 			TimestampType timestampType = TimestampType.SIGNATURE_TIMESTAMP;
 			if (isArchiveTimestamp) {
 				timestampType = TimestampType.ARCHIVE_TIMESTAMP;
 			}
-			timestampToken = new TimestampToken(timeStampToken, timestampType, validationCertPool);
+			timestampToken = new TimestampToken(cms, timestampType, validationCertPool);
 			content = cms;
-			logger.debug("Created PdfBoxDocTimestampInfo {} : {}", timestampType, uniqueId());
+			LOG.debug("Created PdfBoxDocTimestampInfo {} : {}", timestampType, uniqueId());
 		} catch (Exception e) {
 			throw new DSSException(e);
 		}

@@ -24,7 +24,6 @@ import java.math.BigInteger;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
-import java.security.Principal;
 import java.security.PublicKey;
 import java.security.SignatureException;
 import java.security.cert.CertificateEncodingException;
@@ -103,7 +102,7 @@ public class CertificateToken extends Token {
 	 *
 	 * @param cert
 	 *            <code>X509Certificate</code>
-	 * @return
+	 * @return the wrapper for the certificate
 	 */
 	static CertificateToken newInstance(X509Certificate cert) {
 		return new CertificateToken(cert);
@@ -113,7 +112,7 @@ public class CertificateToken extends Token {
 	 * Creates a CertificateToken wrapping the provided X509Certificate.
 	 *
 	 * @param x509Certificate
-	 *            X509Certificate
+	 *            the X509Certificate object
 	 */
 	public CertificateToken(X509Certificate x509Certificate) {
 		if (x509Certificate == null) {
@@ -134,6 +133,7 @@ public class CertificateToken extends Token {
 	 * This method adds the source type of the certificate (what is its origin). Each source is present only once.
 	 *
 	 * @param certSourceType
+	 *            the origin of the certificate
 	 */
 	public void addSourceType(final CertificateSourceType certSourceType) {
 		if (certSourceType != null) {
@@ -145,6 +145,7 @@ public class CertificateToken extends Token {
 	 * This method adds the associated trusted service information.
 	 *
 	 * @param serviceInfo
+	 *            a trust service information
 	 */
 	public void addServiceInfo(final ServiceInfo serviceInfo) {
 		if (serviceInfo != null) {
@@ -158,6 +159,8 @@ public class CertificateToken extends Token {
 	}
 
 	/**
+	 * Adds a revocation data for the current certificate
+	 * 
 	 * @param revocationToken
 	 *            This is the reference to the CertificateStatus. The object type is used because of the organisation
 	 *            of module.
@@ -168,6 +171,8 @@ public class CertificateToken extends Token {
 
 	/**
 	 * Returns the certificate revocation revocationToken object.
+	 * 
+	 * @return a Set of revocation data (OCSP responses and/or CRL)
 	 */
 	public Set<RevocationToken> getRevocationTokens() {
 		return revocationTokens;
@@ -184,25 +189,25 @@ public class CertificateToken extends Token {
 	 * supported algorithms and the methods for encoding the public key materials (public key and parameters) are
 	 * specified in section 7.3.
 	 *
-	 * @return
+	 * @return the public key of the certificate
 	 */
 	public PublicKey getPublicKey() {
 		return x509Certificate.getPublicKey();
 	}
 
 	/**
-	 * Returns .
+	 * Returns the expiration date of the certificate.
 	 *
-	 * @return
+	 * @return the expiration date (notAfter)
 	 */
 	public Date getNotAfter() {
 		return x509Certificate.getNotAfter();
 	}
 
 	/**
-	 * Returns .
+	 * Returns the issuance date of the certificate.
 	 *
-	 * @return
+	 * @return the issuance date (notBefore)
 	 */
 	public Date getNotBefore() {
 		return x509Certificate.getNotBefore();
@@ -212,7 +217,8 @@ public class CertificateToken extends Token {
 	 * Checks if the certificate is expired on the given date.
 	 *
 	 * @param date
-	 * @return
+	 *            the date to be tested
+	 * @return true if the certificate was expired on the given date
 	 */
 	public boolean isExpiredOn(final Date date) {
 		if ((x509Certificate == null) || (date == null)) {
@@ -225,7 +231,8 @@ public class CertificateToken extends Token {
 	 * Checks if the given date is in the validity period of the certificate.
 	 *
 	 * @param date
-	 * @return
+	 *            the date to be tested
+	 * @return true if the given date is in the certificate period validity
 	 */
 	public boolean isValidOn(final Date date) {
 		if ((x509Certificate == null) || (date == null)) {
@@ -275,7 +282,7 @@ public class CertificateToken extends Token {
 	/**
 	 * Checks if the certificate is provided by the trusted source.
 	 *
-	 * @return
+	 * @return true if the certificate is trusted (from a Trusted List or a TrustStore)
 	 */
 	@Override
 	public boolean isTrusted() {
@@ -284,23 +291,48 @@ public class CertificateToken extends Token {
 
 	/**
 	 * Checks if the certificate is self-signed.
+	 * 
+	 * "Self-signed certificates are self-issued certificates where the digital signature may be verified by the public
+	 * key bound into the certificate. Self-signed certificates are used to convey a public key for use to begin
+	 * certification paths." [RFC5280]
 	 *
-	 * @return
+	 * @return true if the certificate is a self-sign
 	 */
 	@Override
 	public boolean isSelfSigned() {
 		if (selfSigned == null) {
-			final String n1 = x509Certificate.getSubjectX500Principal().getName(X500Principal.CANONICAL);
-			final String n2 = x509Certificate.getIssuerX500Principal().getName(X500Principal.CANONICAL);
-			selfSigned = n1.equals(n2);
+			selfSigned = isSelfIssued();
+			if (selfSigned) {
+				try {
+					PublicKey publicKey = x509Certificate.getPublicKey();
+					x509Certificate.verify(publicKey);
+					selfSigned = true;
+				} catch (Exception e) {
+					selfSigned = false;
+				}
+			}
 		}
 		return selfSigned;
 	}
 
 	/**
+	 * This method returns true if the certificate is self-issued.
+	 * 
+	 * "Self-issued certificates are CA certificates in which the issuer and subject are the same entity.
+	 * Self-issued certificates are generated to support changes in policy or operations." [RFC5280]
+	 * 
+	 * @return true if the certificate is self-issued
+	 */
+	public boolean isSelfIssued() {
+		final String n1 = x509Certificate.getSubjectX500Principal().getName(X500Principal.CANONICAL);
+		final String n2 = x509Certificate.getIssuerX500Principal().getName(X500Principal.CANONICAL);
+		return n1.equals(n2);
+	}
+
+	/**
 	 * Gets the enclosed X509 Certificate.
 	 *
-	 * @return
+	 * @return the X509Certificate object
 	 */
 	public X509Certificate getCertificate() {
 		return x509Certificate;
@@ -325,7 +357,7 @@ public class CertificateToken extends Token {
 	 * ...).
 	 * This method does not guarantee that the token is trusted or not.
 	 *
-	 * @return
+	 * @return the different sources where the certificate is found
 	 */
 	public Set<CertificateSourceType> getSources() {
 		return sources;
@@ -335,7 +367,7 @@ public class CertificateToken extends Token {
 	 * Gets information about the trusted context of the certificate. See {@link eu.europa.esig.dss.tsl.ServiceInfo} for
 	 * more information.
 	 *
-	 * @return
+	 * @return the linked trusted service information
 	 */
 	public Set<ServiceInfo> getAssociatedTSPS() {
 		if (isTrusted()) {
@@ -348,7 +380,7 @@ public class CertificateToken extends Token {
 	 * Gets the serialNumber value from the encapsulated certificate. The serial number is an integer assigned by the
 	 * certification authority to each certificate. It must be unique for each certificate issued by a given CA.
 	 *
-	 * @return
+	 * @return the certificate serial number
 	 */
 	public BigInteger getSerialNumber() {
 		return x509Certificate.getSerialNumber();
@@ -358,7 +390,7 @@ public class CertificateToken extends Token {
 	 * Returns the subject (subject distinguished name) value from the certificate as an X500Principal. If the subject
 	 * value is empty, then the getName() method of the returned X500Principal object returns an empty string ("").
 	 *
-	 * @return
+	 * @return the Subject X500Principal
 	 */
 	public X500Principal getSubjectX500Principal() {
 		return x509Certificate.getSubjectX500Principal();
@@ -373,7 +405,7 @@ public class CertificateToken extends Token {
 			final PublicKey publicKey = issuerToken.getCertificate().getPublicKey();
 			x509Certificate.verify(publicKey);
 			signatureValid = true;
-			if (!isSelfSigned()) {
+			if (!isSelfSigned() && !this.equals(issuerToken)) {
 				this.issuerToken = issuerToken;
 			}
 		} catch (InvalidKeyException e) {
@@ -390,10 +422,20 @@ public class CertificateToken extends Token {
 		return signatureValid;
 	}
 
+	/**
+	 * Returns the used digest algorithm when the certificate was signed
+	 * 
+	 * @return the used digest algorithm
+	 */
 	public DigestAlgorithm getDigestAlgorithm() {
 		return digestAlgorithm;
 	}
 
+	/**
+	 * Returns the used encryption algorithm when the certificate was signed (issuer private key algorithm)
+	 * 
+	 * @return the used encryption algorithm
+	 */
 	public EncryptionAlgorithm getEncryptionAlgorithm() {
 		return encryptionAlgorithm;
 	}
@@ -402,14 +444,16 @@ public class CertificateToken extends Token {
 	 * Returns the trust anchor associated with the certificate. If it is the self-signed certificate then {@code this}
 	 * is returned.
 	 *
-	 * @return
+	 * @return the linked trust anchor certificate
 	 */
 	public CertificateToken getTrustAnchor() {
 		if (isSelfSigned() && isTrusted()) {
 			return this;
 		}
+		Set<CertificateToken> processedTokens = new HashSet<CertificateToken>();
 		CertificateToken issuerCertToken = getIssuerToken();
-		while (issuerCertToken != null) {
+		while ((issuerCertToken != null) && (!processedTokens.contains(issuerCertToken))) {
+			processedTokens.add(issuerCertToken);
 			if (issuerCertToken.isTrusted()) {
 				return issuerCertToken;
 			}
@@ -433,7 +477,7 @@ public class CertificateToken extends Token {
 	@Override
 	public String toString(String indentStr) {
 		try {
-			final StringBuffer out = new StringBuffer();
+			final StringBuilder out = new StringBuilder();
 			out.append(indentStr).append("CertificateToken[\n");
 			indentStr += "\t";
 
@@ -509,7 +553,9 @@ public class CertificateToken extends Token {
 	}
 
 	/**
-	 * @return return the id associated with the certificate in case of an XML signature, or null
+	 * Returns a XML compliant ID
+	 * 
+	 * @return the id associated with the certificate in case of an XML signature, or null
 	 */
 	public String getXmlId() {
 		return xmlId;
@@ -519,7 +565,7 @@ public class CertificateToken extends Token {
 	 * Sets the Id associated with the certificate in case of an XML signature.
 	 *
 	 * @param xmlId
-	 *            id
+	 *            xml compliant id
 	 */
 	public void setXmlId(final String xmlId) {
 		this.xmlId = xmlId;
@@ -545,16 +591,13 @@ public class CertificateToken extends Token {
 		return keyUsageBits;
 	}
 
+	/**
+	 * The signature value of the certificate
+	 * 
+	 * @return the signature value
+	 */
 	public byte[] getSignature() {
 		return x509Certificate.getSignature();
-	}
-
-	public Principal getIssuerDN() {
-		return x509Certificate.getIssuerDN();
-	}
-
-	public Principal getSubjectDN() {
-		return x509Certificate.getSubjectDN();
 	}
 
 }

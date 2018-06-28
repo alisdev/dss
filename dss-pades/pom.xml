@@ -6,7 +6,7 @@
 	<parent>
 		<groupId>cz.alis.forked.eu.europa.ec.joinup.sd-dss</groupId>
 		<artifactId>sd-dss</artifactId>
-		<version>5.1-SNAPSHOT</version>
+		<version>5.4-SNAPSHOT</version>
 	</parent>
 
 	<artifactId>dss-pades</artifactId>
@@ -16,15 +16,7 @@
   	<dependencies>
         <dependency>
             <groupId>cz.alis.forked.eu.europa.ec.joinup.sd-dss</groupId>
-            <artifactId>dss-document</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>cz.alis.forked.eu.europa.ec.joinup.sd-dss</groupId>
             <artifactId>dss-cades</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>cz.alis.forked.eu.europa.ec.joinup.sd-dss</groupId>
-            <artifactId>dss-spi</artifactId>
         </dependency>
 		
 		<dependency>
@@ -44,12 +36,22 @@
 			<artifactId>dss-test</artifactId>
 			<scope>test</scope>
 		</dependency>
-		<dependency>
-			<groupId>cz.alis.forked.eu.europa.ec.joinup.sd-dss</groupId>
-			<artifactId>dss-document</artifactId>
-			<type>test-jar</type>
-			<scope>test</scope>
-		</dependency>
 	</dependencies>
-
+	
+    <!-- PDFBox use DataSource -->
+	<profiles>
+		<profile>
+            <id>jdk19-plus</id>
+            <activation>
+                <jdk>[9,)</jdk>
+            </activation>
+            
+            <dependencies>
+	            <dependency>
+					<groupId>com.sun.activation</groupId>
+			    	<artifactId>javax.activation</artifactId>
+				</dependency>
+            </dependencies>
+    	</profile>
+    </profiles>
 </project>

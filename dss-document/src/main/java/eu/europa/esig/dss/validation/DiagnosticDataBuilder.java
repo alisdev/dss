@@ -7,31 +7,33 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.ServiceLoader;
 import java.util.Set;
 
 import javax.security.auth.x500.X500Principal;
 
-import org.bouncycastle.asn1.ASN1OctetString;
-import org.bouncycastle.asn1.ASN1Sequence;
 import org.bouncycastle.asn1.x500.style.BCStyle;
-import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import eu.europa.esig.dss.CertificatePolicy;
 import eu.europa.esig.dss.DSSASN1Utils;
 import eu.europa.esig.dss.DSSDocument;
 import eu.europa.esig.dss.DSSPKUtils;
-import eu.europa.esig.dss.DSSUtils;
+import eu.europa.esig.dss.Digest;
 import eu.europa.esig.dss.DigestAlgorithm;
 import eu.europa.esig.dss.EncryptionAlgorithm;
+import eu.europa.esig.dss.MaskGenerationFunction;
 import eu.europa.esig.dss.SignatureAlgorithm;
 import eu.europa.esig.dss.SignatureLevel;
 import eu.europa.esig.dss.jaxb.diagnostic.DiagnosticData;
 import eu.europa.esig.dss.jaxb.diagnostic.XmlBasicSignature;
 import eu.europa.esig.dss.jaxb.diagnostic.XmlCertificate;
+import eu.europa.esig.dss.jaxb.diagnostic.XmlCertificatePolicy;
 import eu.europa.esig.dss.jaxb.diagnostic.XmlCertifiedRole;
 import eu.europa.esig.dss.jaxb.diagnostic.XmlChainItem;
 import eu.europa.esig.dss.jaxb.diagnostic.XmlContainerInfo;
@@ -45,12 +47,10 @@ import eu.europa.esig.dss.jaxb.diagnostic.XmlRevocation;
 import eu.europa.esig.dss.jaxb.diagnostic.XmlSignature;
 import eu.europa.esig.dss.jaxb.diagnostic.XmlSignatureProductionPlace;
 import eu.europa.esig.dss.jaxb.diagnostic.XmlSignatureScope;
-import eu.europa.esig.dss.jaxb.diagnostic.XmlSignedObjects;
-import eu.europa.esig.dss.jaxb.diagnostic.XmlSignedSignature;
 import eu.europa.esig.dss.jaxb.diagnostic.XmlSigningCertificate;
 import eu.europa.esig.dss.jaxb.diagnostic.XmlStructuralValidation;
 import eu.europa.esig.dss.jaxb.diagnostic.XmlTimestamp;
-import eu.europa.esig.dss.jaxb.diagnostic.XmlTimestampedTimestamp;
+import eu.europa.esig.dss.jaxb.diagnostic.XmlTimestampedObject;
 import eu.europa.esig.dss.jaxb.diagnostic.XmlTrustedList;
 import eu.europa.esig.dss.jaxb.diagnostic.XmlTrustedService;
 import eu.europa.esig.dss.jaxb.diagnostic.XmlTrustedServiceProvider;
@@ -265,8 +265,9 @@ public class DiagnosticDataBuilder {
 
 		final AdvancedSignature masterSignature = signature.getMasterSignature();
 		if (masterSignature != null) {
-			xmlSignature.setType(AttributeValue.COUNTERSIGNATURE);
+			xmlSignature.setCounterSignature(true);
 			xmlSignature.setParentId(masterSignature.getId());
+			xmlSignature.setSignatureFilename(removeSpecialCharsForXml(masterSignature.getSignatureFilename()));
 		}
 		xmlSignature.setId(signature.getId());
 		xmlSignature.setDateTime(signature.getSigningTime());
@@ -297,7 +298,7 @@ public class DiagnosticDataBuilder {
 
 		xmlSignature.setBasicSignature(getXmlBasicSignature(signature, signingCertificateToken));
 
-		xmlSignature.setPolicy(getXmlPolicy(signature.getPolicyId()));
+		xmlSignature.setPolicy(getXmlPolicy(signature));
 
 		xmlSignature.setTimestamps(getXmlTimestamps(signature));
 
@@ -326,9 +327,13 @@ public class DiagnosticDataBuilder {
 		return Utils.EMPTY_STRING;
 	}
 
-	private XmlRevocation getXmlRevocation(RevocationToken revocationToken, String xmlId, Set<DigestAlgorithm> usedDigestAlgorithms) {
+	private XmlRevocation getXmlRevocation(CertificateToken certToken, RevocationToken revocationToken, Set<DigestAlgorithm> usedDigestAlgorithms) {
 		final XmlRevocation xmlRevocation = new XmlRevocation();
+
+		// In case of CRL, the X509CRL can be the same for different certificates
+		String xmlId = Utils.toHex(certToken.getDigest(DigestAlgorithm.SHA256)) + Utils.toHex(revocationToken.getDigest(DigestAlgorithm.SHA256));
 		xmlRevocation.setId(xmlId);
+
 		xmlRevocation.setOrigin(revocationToken.getOrigin().name());
 		final Boolean revocationTokenStatus = revocationToken.getStatus();
 		// revocationTokenStatus can be null when OCSP return Unknown. In
@@ -347,6 +352,14 @@ public class DiagnosticDataBuilder {
 		if (Utils.isStringNotEmpty(sourceURL)) { // not empty = online
 			xmlRevocation.setSourceAddress(sourceURL);
 			xmlRevocation.setAvailable(revocationToken.isAvailable());
+		}
+
+		Digest certHash = revocationToken.getCertHash();
+		if (certHash != null) {
+			xmlRevocation.setCertHashExtensionPresent(true);
+			byte[] expectedDigest = certToken.getDigest(certHash.getAlgorithm());
+			byte[] foundDigest = certHash.getValue();
+			xmlRevocation.setCertHashExtensionMatch(Arrays.equals(expectedDigest, foundDigest));
 		}
 
 		xmlRevocation.setBasicSignature(getXmlBasicSignature(revocationToken));
@@ -389,13 +402,15 @@ public class DiagnosticDataBuilder {
 
 			CertificateToken issuerToken_ = token;
 			final List<XmlChainItem> certChainTokens = new ArrayList<XmlChainItem>();
+			Set<CertificateToken> processedTokens = new HashSet<CertificateToken>();
 			do {
 
 				certChainTokens.add(getXmlChainItem(issuerToken_));
-				if (issuerToken_.isTrusted() || issuerToken_.isSelfSigned()) {
+				if (issuerToken_.isTrusted() || issuerToken_.isSelfSigned() || processedTokens.contains(issuerToken_)) {
 
 					break;
 				}
+				processedTokens.add(issuerToken_);
 				issuerToken_ = issuerToken_.getIssuerToken();
 			} while (issuerToken_ != null);
 			return certChainTokens;
@@ -452,7 +467,6 @@ public class DiagnosticDataBuilder {
 		xmlSignCertType.setDigestValueMatch(theCertificateValidity.isDigestEqual());
 		final boolean issuerSerialMatch = theCertificateValidity.isSerialNumberEqual() && theCertificateValidity.isDistinguishedNameEqual();
 		xmlSignCertType.setIssuerSerialMatch(issuerSerialMatch);
-		xmlSignCertType.setSigned(theCertificateValidity.getSigned());
 		return xmlSignCertType;
 	}
 
@@ -526,7 +540,8 @@ public class DiagnosticDataBuilder {
 	 *            The Signature Policy
 	 * 
 	 */
-	private XmlPolicy getXmlPolicy(SignaturePolicy signaturePolicy) {
+	private XmlPolicy getXmlPolicy(AdvancedSignature signature) {
+		SignaturePolicy signaturePolicy = signature.getPolicyId();
 		if (signaturePolicy == null) {
 			return null;
 		}
@@ -549,111 +564,33 @@ public class DiagnosticDataBuilder {
 			xmlPolicy.setDigestAlgoAndValue(getXmlDigestAlgoAndValue(signPolicyHashAlgFromSignature, digestValue));
 		}
 
-		/**
-		 * ETSI 102 853: 3) Obtain the digest of the resulting document against which the digest value present in the
-		 * property/attribute will be checked:
-		 */
-		final DSSDocument policyContent = signaturePolicy.getPolicyContent();
-		byte[] policyBytes = null;
-		if (policyContent == null) {
-			xmlPolicy.setIdentified(false);
-			if (policyId.isEmpty()) {
-				xmlPolicy.setStatus(true);
-			} else {
-				xmlPolicy.setStatus(false);
-			}
-			return xmlPolicy;
-		} else {
-			policyBytes = DSSUtils.toByteArray(policyContent);
-			xmlPolicy.setStatus(true);
-		}
-		xmlPolicy.setIdentified(true);
-
-		if (Utils.isArrayEmpty(policyBytes)) {
-			xmlPolicy.setIdentified(false);
-			xmlPolicy.setProcessingError("Empty content for policy");
-			return xmlPolicy;
-		}
-
-		ASN1Sequence asn1Sequence = null;
 		try {
-			asn1Sequence = DSSASN1Utils.toASN1Primitive(policyBytes);
-		} catch (Exception e) {
-			LOG.info("Policy bytes are not asn1 processable : " + e.getMessage());
-		}
+			SignaturePolicyValidator validator = null;
+			ServiceLoader<SignaturePolicyValidator> loader = ServiceLoader.load(SignaturePolicyValidator.class);
+			Iterator<SignaturePolicyValidator> validatorOptions = loader.iterator();
 
-		try {
-			if (asn1Sequence != null) {
-				xmlPolicy.setAsn1Processable(true);
-
-				/**
-				 * a) If the resulting document is based on TR 102 272 [i.2] (ESI: ASN.1 format for signature policies),
-				 * use the digest value present in the
-				 * SignPolicyDigest element from the resulting document. Check that the digest algorithm indicated in
-				 * the SignPolicyDigestAlg from the resulting
-				 * document is equal to the digest algorithm indicated in the property.
-				 */
-
-				final ASN1Sequence signPolicyHashAlgObject = (ASN1Sequence) asn1Sequence.getObjectAt(0);
-				final AlgorithmIdentifier signPolicyHashAlgIdentifier = AlgorithmIdentifier.getInstance(signPolicyHashAlgObject);
-				DigestAlgorithm signPolicyHashAlgFromPolicy = DigestAlgorithm.forOID(signPolicyHashAlgIdentifier.getAlgorithm().getId());
-
-				/**
-				 * b) If the resulting document is based on TR 102 038 [i.3] ((ESI) XML format for signature policies),
-				 * use the digest value present in
-				 * signPolicyHash element from the resulting document. Check that the digest algorithm indicated in the
-				 * signPolicyHashAlg from the resulting
-				 * document is equal to the digest algorithm indicated in the attribute.
-				 */
-
-				/**
-				 * The use of a zero-sigPolicyHash value is to ensure backwards compatibility with earlier versions of
-				 * the current document. If sigPolicyHash is
-				 * zero, then the hash value should not be checked against the calculated hash value of the signature
-				 * policy.
-				 */
-				if (!signPolicyHashAlgFromPolicy.equals(signPolicyHashAlgFromSignature)) {
-					xmlPolicy.setProcessingError("The digest algorithm indicated in the SignPolicyHashAlg from the resulting document ("
-							+ signPolicyHashAlgFromPolicy + ") is not equal to the digest " + "algorithm (" + signPolicyHashAlgFromSignature + ").");
-					xmlPolicy.setDigestAlgorithmsEqual(false);
-					xmlPolicy.setStatus(false);
-					return xmlPolicy;
-				} else {
-					xmlPolicy.setDigestAlgorithmsEqual(true);
-				}
-
-				String recalculatedDigestValue = Utils.toBase64(DSSASN1Utils.getAsn1SignaturePolicyDigest(signPolicyHashAlgFromPolicy, policyBytes));
-
-				boolean equal = Utils.areStringsEqual(digestValue, recalculatedDigestValue);
-				xmlPolicy.setStatus(equal);
-				if (!equal) {
-					xmlPolicy.setProcessingError(
-							"The policy digest value (" + digestValue + ") does not match the re-calculated digest value (" + recalculatedDigestValue + ").");
-					return xmlPolicy;
-				}
-
-				final ASN1OctetString signPolicyHash = (ASN1OctetString) asn1Sequence.getObjectAt(2);
-				final String policyDigestValueFromPolicy = Utils.toBase64(signPolicyHash.getOctets());
-				equal = Utils.areStringsEqual(digestValue, policyDigestValueFromPolicy);
-				xmlPolicy.setStatus(equal);
-				if (!equal) {
-					xmlPolicy.setProcessingError("The policy digest value (" + digestValue + ") does not match the digest value from the policy file ("
-							+ policyDigestValueFromPolicy + ").");
-				}
-			} else {
-				/**
-				 * c) In all other cases, compute the digest using the digesting algorithm indicated in the children of
-				 * the property/attribute.
-				 */
-				String recalculatedDigestValue = Utils.toBase64(DSSUtils.digest(signPolicyHashAlgFromSignature, policyBytes));
-				boolean equal = Utils.areStringsEqual(digestValue, recalculatedDigestValue);
-				xmlPolicy.setStatus(equal);
-				if (!equal) {
-					xmlPolicy.setProcessingError(
-							"The policy digest value (" + digestValue + ") does not match the re-calculated digest value (" + recalculatedDigestValue + ").");
+			if (validatorOptions.hasNext()) {
+				for (SignaturePolicyValidator signaturePolicyValidator : loader) {
+					signaturePolicyValidator.setSignature(signature);
+					if (signaturePolicyValidator.canValidate()) {
+						validator = signaturePolicyValidator;
+						break;
+					}
 				}
 			}
 
+			if (validator == null) {
+				// if not empty and no other implementation is found for ASN1 signature policies
+				validator = new BasicASNSignaturePolicyValidator();
+				validator.setSignature(signature);
+			}
+
+			validator.validate();
+			xmlPolicy.setAsn1Processable(validator.isAsn1Processable());
+			xmlPolicy.setDigestAlgorithmsEqual(validator.isDigestAlgorithmsEqual());
+			xmlPolicy.setIdentified(validator.isIdentified());
+			xmlPolicy.setStatus(validator.isStatus());
+			xmlPolicy.setProcessingError(validator.getProcessingErrors());
 		} catch (Exception e) {
 			// When any error (communication) we just set the status to false
 			xmlPolicy.setStatus(false);
@@ -692,35 +629,30 @@ public class DiagnosticDataBuilder {
 
 		xmlTimestampToken.setSigningCertificate(getXmlSigningCertificate(issuerToken));
 		xmlTimestampToken.setCertificateChain(getXmlForCertificateChain(issuerToken));
-		xmlTimestampToken.setSignedObjects(getXmlSignedObjects(timestampToken.getTimestampedReferences()));
+		xmlTimestampToken.setTimestampedObjects(getXmlTimestampedObjects(timestampToken.getTimestampedReferences()));
 
 		return xmlTimestampToken;
 	}
 
-	private XmlSignedObjects getXmlSignedObjects(List<TimestampReference> timestampReferences) {
+	private List<XmlTimestampedObject> getXmlTimestampedObjects(List<TimestampReference> timestampReferences) {
 		if (Utils.isCollectionNotEmpty(timestampReferences)) {
-			final XmlSignedObjects xmlSignedObjectsType = new XmlSignedObjects();
-			final List<XmlDigestAlgoAndValue> xmlDigestAlgAndValueList = xmlSignedObjectsType.getDigestAlgoAndValues();
+			List<XmlTimestampedObject> objects = new ArrayList<XmlTimestampedObject>();
 			for (final TimestampReference timestampReference : timestampReferences) {
-				final TimestampReferenceCategory timestampedCategory = timestampReference.getCategory();
-				if (TimestampReferenceCategory.SIGNATURE.equals(timestampedCategory)) {
+				XmlTimestampedObject timestampedObject = new XmlTimestampedObject();
 
-					final XmlSignedSignature xmlSignedSignature = new XmlSignedSignature();
-					xmlSignedSignature.setId(timestampReference.getSignatureId());
-					xmlSignedObjectsType.getSignedSignature().add(xmlSignedSignature);
-				} else if (TimestampReferenceCategory.TIMESTAMP.equals(timestampedCategory)) {
-					final XmlTimestampedTimestamp xmlTimestampedTimestamp = new XmlTimestampedTimestamp();
-					xmlTimestampedTimestamp.setId(timestampReference.getSignatureId());
-					xmlSignedObjectsType.getTimestampedTimestamp().add(xmlTimestampedTimestamp);
+				final TimestampedObjectType timestampedCategory = timestampReference.getCategory();
+				timestampedObject.setCategory(timestampReference.getCategory());
+				if (TimestampedObjectType.SIGNATURE == timestampedCategory || TimestampedObjectType.TIMESTAMP == timestampedCategory) {
+					timestampedObject.setId(timestampReference.getSignatureId());
 				} else {
-
-					final XmlDigestAlgoAndValue xmlDigestAlgAndValue = getXmlDigestAlgoAndValue(timestampReference.getDigestAlgorithm(),
-							timestampReference.getDigestValue());
-					xmlDigestAlgAndValue.setCategory(timestampedCategory.name());
-					xmlDigestAlgAndValueList.add(xmlDigestAlgAndValue);
+					// CERTIFICATE || REVOCATION
+					timestampedObject
+							.setDigestAlgoAndValue(getXmlDigestAlgoAndValue(timestampReference.getDigestAlgorithm(), timestampReference.getDigestValue()));
 				}
+
+				objects.add(timestampedObject);
 			}
-			return xmlSignedObjectsType;
+			return objects;
 		}
 		return null;
 	}
@@ -762,9 +694,13 @@ public class DiagnosticDataBuilder {
 
 		final int keyLength = signingCertificateToken == null ? 0 : DSSPKUtils.getPublicKeySize(signingCertificateToken.getPublicKey());
 		xmlBasicSignature.setKeyLengthUsedToSignThisToken(String.valueOf(keyLength));
-		final DigestAlgorithm digestAlgorithm = getDigestAlgorithm(signature);
+		final DigestAlgorithm digestAlgorithm = signature.getDigestAlgorithm();
 		final String digestAlgorithmString = digestAlgorithm == null ? "?" : digestAlgorithm.getName();
 		xmlBasicSignature.setDigestAlgoUsedToSignThisToken(digestAlgorithmString);
+		MaskGenerationFunction maskGenerationFunction = signature.getMaskGenerationFunction();
+		if (maskGenerationFunction != null) {
+			xmlBasicSignature.setMaskGenerationFunctionUsedToSignThisToken(maskGenerationFunction.name());
+		}
 
 		SignatureCryptographicVerification scv = signature.getSignatureCryptographicVerification();
 		xmlBasicSignature.setReferenceDataFound(scv.isReferenceDataFound());
@@ -772,16 +708,6 @@ public class DiagnosticDataBuilder {
 		xmlBasicSignature.setSignatureIntact(scv.isSignatureIntact());
 		xmlBasicSignature.setSignatureValid(scv.isSignatureValid());
 		return xmlBasicSignature;
-	}
-
-	private DigestAlgorithm getDigestAlgorithm(final AdvancedSignature signature) {
-		DigestAlgorithm digestAlgorithm = null;
-		try {
-			digestAlgorithm = signature.getDigestAlgorithm();
-		} catch (Exception e) {
-			LOG.error("Unable to retrieve digest algorithm : " + e.getMessage());
-		}
-		return digestAlgorithm;
 	}
 
 	private List<XmlSignatureScope> getXmlSignatureScopes(List<SignatureScope> scopes) {
@@ -818,16 +744,19 @@ public class DiagnosticDataBuilder {
 
 		X500Principal x500Principal = certToken.getSubjectX500Principal();
 		xmlCert.setCommonName(DSSASN1Utils.extractAttributeFromX500Principal(BCStyle.CN, x500Principal));
+		xmlCert.setLocality(DSSASN1Utils.extractAttributeFromX500Principal(BCStyle.L, x500Principal));
+		xmlCert.setState(DSSASN1Utils.extractAttributeFromX500Principal(BCStyle.ST, x500Principal));
 		xmlCert.setCountryName(DSSASN1Utils.extractAttributeFromX500Principal(BCStyle.C, x500Principal));
 		xmlCert.setOrganizationName(DSSASN1Utils.extractAttributeFromX500Principal(BCStyle.O, x500Principal));
 		xmlCert.setGivenName(DSSASN1Utils.extractAttributeFromX500Principal(BCStyle.GIVENNAME, x500Principal));
 		xmlCert.setOrganizationalUnit(DSSASN1Utils.extractAttributeFromX500Principal(BCStyle.OU, x500Principal));
 		xmlCert.setSurname(DSSASN1Utils.extractAttributeFromX500Principal(BCStyle.SURNAME, x500Principal));
 		xmlCert.setPseudonym(DSSASN1Utils.extractAttributeFromX500Principal(BCStyle.PSEUDONYM, x500Principal));
+		xmlCert.setEmail(DSSASN1Utils.extractAttributeFromX500Principal(BCStyle.E, x500Principal));
 
 		xmlCert.setAuthorityInformationAccessUrls(DSSASN1Utils.getCAAccessLocations(certToken));
-		xmlCert.setOCSPAccessUrls(DSSASN1Utils.getOCSPAccessLocations(certToken));
-		xmlCert.setCRLDistributionPoints(DSSASN1Utils.getCrlUrls(certToken));
+		xmlCert.setOCSPAccessUrls(DSSASN1Utils.getOCSPAccessLocations(certToken, false));
+		xmlCert.setCRLDistributionPoints(DSSASN1Utils.getCrlUrls(certToken, false));
 
 		xmlCert.setDigestAlgoAndValues(getXmlDigestAlgoAndValues(usedDigestAlgorithms, certToken));
 
@@ -838,8 +767,8 @@ public class DiagnosticDataBuilder {
 		xmlCert.setPublicKeyEncryptionAlgo(DSSPKUtils.getPublicKeyEncryptionAlgo(publicKey));
 
 		xmlCert.setKeyUsageBits(getXmlKeyUsages(certToken.getKeyUsageBits()));
+		xmlCert.setExtendedKeyUsages(getXmlOids(DSSASN1Utils.getExtendedKeyUsage(certToken)));
 
-		xmlCert.setIdKpOCSPSigning(DSSASN1Utils.isOCSPSigning(certToken));
 		xmlCert.setIdPkixOcspNoCheck(DSSASN1Utils.hasIdPkixOcspNoCheckExtension(certToken));
 
 		xmlCert.setBasicSignature(getXmlBasicSignature(certToken));
@@ -850,7 +779,7 @@ public class DiagnosticDataBuilder {
 
 		xmlCert.setQCStatementIds(getXmlOids(DSSASN1Utils.getQCStatementsIdList(certToken)));
 		xmlCert.setQCTypes(getXmlOids(DSSASN1Utils.getQCTypesIdList(certToken)));
-		xmlCert.setCertificatePolicyIds(getXmlOids(DSSASN1Utils.getPolicyIdentifiers(certToken)));
+		xmlCert.setCertificatePolicies(getXmlCertificatePolicies(DSSASN1Utils.getCertificatePolicies(certToken)));
 
 		xmlCert.setSelfSigned(certToken.isSelfSigned());
 		xmlCert.setTrusted(certToken.isTrusted());
@@ -859,9 +788,7 @@ public class DiagnosticDataBuilder {
 		final Set<RevocationToken> revocationTokens = certToken.getRevocationTokens();
 		if (Utils.isCollectionNotEmpty(revocationTokens)) {
 			for (RevocationToken revocationToken : revocationTokens) {
-				// In case of CRL, the X509CRL can be the same for different certificates
-				String xmlId = Utils.toHex(certToken.getDigest(DigestAlgorithm.SHA256)) + Utils.toHex(revocationToken.getDigest(DigestAlgorithm.SHA256));
-				xmlCert.getRevocations().add(getXmlRevocation(revocationToken, xmlId, usedDigestAlgorithms));
+				xmlCert.getRevocations().add(getXmlRevocation(certToken, revocationToken, usedDigestAlgorithms));
 			}
 		}
 
@@ -870,13 +797,27 @@ public class DiagnosticDataBuilder {
 		return xmlCert;
 	}
 
+	private List<XmlCertificatePolicy> getXmlCertificatePolicies(List<CertificatePolicy> certificatePolicies) {
+		List<XmlCertificatePolicy> result = new ArrayList<XmlCertificatePolicy>();
+		for (CertificatePolicy cp : certificatePolicies) {
+			XmlCertificatePolicy xmlCP = new XmlCertificatePolicy();
+			xmlCP.setValue(cp.getOid());
+			xmlCP.setDescription(OidRepository.getDescription(cp.getOid()));
+			xmlCP.setCpsUrl(cp.getCpsUrl());
+			result.add(xmlCP);
+		}
+		return result;
+	}
+
 	private List<XmlOID> getXmlOids(List<String> oidList) {
 		List<XmlOID> result = new ArrayList<XmlOID>();
-		for (String oid : oidList) {
-			XmlOID xmlOID = new XmlOID();
-			xmlOID.setValue(oid);
-			xmlOID.setDescription(OidRepository.getDescription(oid));
-			result.add(xmlOID);
+		if (Utils.isCollectionNotEmpty(oidList)) {
+			for (String oid : oidList) {
+				XmlOID xmlOID = new XmlOID();
+				xmlOID.setValue(oid);
+				xmlOID.setDescription(OidRepository.getDescription(oid));
+				result.add(xmlOID);
+			}
 		}
 		return result;
 	}
@@ -885,13 +826,13 @@ public class DiagnosticDataBuilder {
 		List<XmlTrustedServiceProvider> result = new ArrayList<XmlTrustedServiceProvider>();
 		Set<ServiceInfo> services = getLinkedTrustedServices(certToken);
 		Map<String, List<ServiceInfo>> servicesByProviders = classifyByServiceProvider(services);
-		for (List<ServiceInfo> serviceByProvider : servicesByProviders.values()) {
-			ServiceInfo first = serviceByProvider.get(0);
+		for (List<ServiceInfo> servicesByProvider : servicesByProviders.values()) {
+			ServiceInfo first = servicesByProvider.get(0);
 			XmlTrustedServiceProvider serviceProvider = new XmlTrustedServiceProvider();
 			serviceProvider.setCountryCode(first.getTlCountryCode());
 			serviceProvider.setTSPName(first.getTspName());
-			serviceProvider.setTSPServiceName(first.getServiceName());
-			serviceProvider.setTrustedServices(getXmlTrustedServices(serviceByProvider, certToken));
+			serviceProvider.setTSPRegistrationIdentifier(first.getTspRegistrationIdentifier());
+			serviceProvider.setTrustedServices(getXmlTrustedServices(servicesByProvider, certToken));
 			result.add(serviceProvider);
 		}
 		return Collections.unmodifiableList(result);
@@ -905,6 +846,7 @@ public class DiagnosticDataBuilder {
 				for (ServiceInfoStatus serviceInfoStatus : serviceStatusAfterOfEqualsCertIssuance) {
 					XmlTrustedService trustedService = new XmlTrustedService();
 
+					trustedService.setServiceName(serviceInfoStatus.getServiceName());
 					trustedService.setServiceType(serviceInfoStatus.getType());
 					trustedService.setStatus(serviceInfoStatus.getStatus());
 					trustedService.setStartDate(serviceInfoStatus.getStartDate());
@@ -918,6 +860,11 @@ public class DiagnosticDataBuilder {
 					List<String> additionalServiceInfoUris = serviceInfoStatus.getAdditionalServiceInfoUris();
 					if (Utils.isCollectionNotEmpty(additionalServiceInfoUris)) {
 						trustedService.setAdditionalServiceInfoUris(additionalServiceInfoUris);
+					}
+
+					List<String> serviceSupplyPoints = serviceInfoStatus.getServiceSupplyPoints();
+					if (Utils.isCollectionNotEmpty(serviceSupplyPoints)) {
+						trustedService.setServiceSupplyPoints(serviceSupplyPoints);
 					}
 
 					trustedService.setExpiredCertsRevocationInfo(serviceInfoStatus.getExpiredCertsRevocationInfo());

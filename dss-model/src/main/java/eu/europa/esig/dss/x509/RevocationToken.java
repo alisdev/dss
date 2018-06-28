@@ -22,6 +22,8 @@ package eu.europa.esig.dss.x509;
 
 import java.util.Date;
 
+import eu.europa.esig.dss.Digest;
+
 @SuppressWarnings("serial")
 public abstract class RevocationToken extends Token {
 
@@ -61,8 +63,8 @@ public abstract class RevocationToken extends Token {
 	protected Date nextUpdate;
 
 	/**
-	 * Represents the revocation date from an X509CRLEntry or from an BasicOCSPResp<br>
-	 * --> getResponses() --> ((RevokedStatus) singleResp.getCertStatus()).getRevocationTime()
+	 * Represents the revocation date from an X509CRLEntry or from an BasicOCSPResp (if the related certificate is
+	 * revoked)
 	 */
 	protected Date revocationDate;
 
@@ -71,10 +73,20 @@ public abstract class RevocationToken extends Token {
 	protected Date archiveCutOff;
 
 	/**
+	 * Represents the certHash extension from an OCSP Response (optional)
+	 */
+	protected Digest certHash;
+
+	/**
 	 * The reason of the revocation.
 	 */
 	protected String reason;
 
+	/**
+	 * Returns the URL of the source (if available)
+	 * 
+	 * @return URL of the CRL/OCSP Server (if available)
+	 */
 	public String getSourceURL() {
 		return sourceURL;
 	}
@@ -90,6 +102,11 @@ public abstract class RevocationToken extends Token {
 		this.sourceURL = sourceURL;
 	}
 
+	/**
+	 * Returns the revocation origin (the signature itself or else)
+	 * 
+	 * @return the origin of this revocation data
+	 */
 	public RevocationOrigin getOrigin() {
 		return origin;
 	}
@@ -98,6 +115,11 @@ public abstract class RevocationToken extends Token {
 		this.origin = origin;
 	}
 
+	/**
+	 * Returns the online resource availability status
+	 * 
+	 * @return true if the online resource was available
+	 */
 	public boolean isAvailable() {
 		return available;
 	}
@@ -107,12 +129,19 @@ public abstract class RevocationToken extends Token {
 	}
 
 	/**
-	 * @return
+	 * Returns the revocation status
+	 * 
+	 * @return true if valid, false if revoked/onhold, null if not available
 	 */
 	public Boolean getStatus() {
 		return status;
 	}
 
+	/**
+	 * Returns the generation time of the current revocation data (when it was signed)
+	 * 
+	 * @return the production time of the current revocation data
+	 */
 	public Date getProductionDate() {
 		return productionDate;
 	}
@@ -122,29 +151,54 @@ public abstract class RevocationToken extends Token {
 	}
 
 	/**
-	 * @return
+	 * Returns the date of the next update
+	 * 
+	 * @return the next update date
 	 */
 	public Date getNextUpdate() {
 		return nextUpdate;
 	}
 
 	/**
-	 * @return
+	 * Returns the revocation date (if the token has been revoked)
+	 * 
+	 * @return the revocation date or null
 	 */
 	public Date getRevocationDate() {
 		return revocationDate;
 	}
 
+	/**
+	 * Returns the expiredCertsOnCRL date (from CRL)
+	 * 
+	 * @return the expiredCertsOnCRL date value from a CRL or null
+	 */
 	public Date getExpiredCertsOnCRL() {
 		return expiredCertsOnCRL;
 	}
 
+	/**
+	 * Returns the archiveCutOff date (from an OCSP Response)
+	 * 
+	 * @return the archiveCutOff date or null
+	 */
 	public Date getArchiveCutOff() {
 		return archiveCutOff;
 	}
 
 	/**
-	 * @return
+	 * Returns the certHash extension (from an OCSP Response)
+	 * 
+	 * @return the certHash contains or null
+	 */
+	public Digest getCertHash() {
+		return certHash;
+	}
+
+	/**
+	 * Returns the revocation reason (if the token has been revoked)
+	 * 
+	 * @return the revocation reason or null
 	 */
 	public String getReason() {
 		return reason;

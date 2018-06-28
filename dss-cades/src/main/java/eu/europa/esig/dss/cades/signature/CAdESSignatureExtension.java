@@ -41,7 +41,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import eu.europa.esig.dss.DSSASN1Utils;
-import eu.europa.esig.dss.DSSConfigurationException;
 import eu.europa.esig.dss.DSSDocument;
 import eu.europa.esig.dss.DSSException;
 import eu.europa.esig.dss.DSSUtils;
@@ -81,7 +80,7 @@ abstract class CAdESSignatureExtension implements SignatureExtension<CAdESSignat
 		this.signatureTsa = signatureTsa;
 		this.onlyLastCMSSignature = onlyLastCMSSignature;
 		if (signatureTsa == null) {
-			throw new DSSConfigurationException(DSSConfigurationException.MSG.CONFIGURE_TSP_SERVER);
+			throw new NullPointerException("Missing TSPSource");
 		}
 	}
 
@@ -105,14 +104,12 @@ abstract class CAdESSignatureExtension implements SignatureExtension<CAdESSignat
 	public CMSSignedDocument extendSignatures(final DSSDocument signatureToExtend, final CAdESSignatureParameters parameters) throws DSSException {
 
 		LOG.info("EXTEND SIGNATURES.");
-		try {
-			final InputStream inputStream = signatureToExtend.openStream();
+		try (InputStream inputStream = signatureToExtend.openStream()) {
 			final CMSSignedData cmsSignedData = new CMSSignedData(inputStream);
-			Utils.closeQuietly(inputStream);
 			final CMSSignedData extendCMSSignedData = extendCMSSignatures(cmsSignedData, parameters);
 			final CMSSignedDocument cmsSignedDocument = new CMSSignedDocument(extendCMSSignedData);
 			return cmsSignedDocument;
-		} catch (CMSException e) {
+		} catch (IOException | CMSException e) {
 			throw new DSSException("Cannot parse CMS data", e);
 		}
 	}
@@ -196,13 +193,7 @@ abstract class CAdESSignatureExtension implements SignatureExtension<CAdESSignat
 
 	private SignerInformation getFirstSigner(CMSSignedData cmsSignedData) {
 		final Collection<SignerInformation> signers = cmsSignedData.getSignerInfos().getSigners();
-		SignerInformation lastSignerInformation;
-		lastSignerInformation = null;
-		for (SignerInformation signerInformation : signers) {
-			lastSignerInformation = signerInformation;
-			break;
-		}
-		return lastSignerInformation;
+		return signers.iterator().next();
 	}
 
 	private void assertSignatureValid(final CAdESSignature cadesSignature, final CAdESSignatureParameters parameters) {
@@ -225,9 +216,9 @@ abstract class CAdESSignatureExtension implements SignatureExtension<CAdESSignat
 	 * @param signerInformation
 	 * @param parameters
 	 * @return
-	 * @throws java.io.IOException
+	 * @throws DSSException
 	 */
-	abstract protected SignerInformation extendCMSSignature(CMSSignedData signedData, SignerInformation signerInformation, CAdESSignatureParameters parameters)
+	protected abstract SignerInformation extendCMSSignature(CMSSignedData signedData, SignerInformation signerInformation, CAdESSignatureParameters parameters)
 			throws DSSException;
 
 	/**
@@ -268,11 +259,11 @@ abstract class CAdESSignatureExtension implements SignatureExtension<CAdESSignat
 
 			if (encodedTimeStampToken == null) {
 				if (LOG.isDebugEnabled()) {
-					LOG.debug("Message to timestamp is: " + Hex.encodeHexString(messageToTimestamp));
+					LOG.debug("Message to timestamp is: ", Utils.toHex(messageToTimestamp));
 				}
 				byte[] timestampDigest = DSSUtils.digest(timestampDigestAlgorithm, messageToTimestamp);
 				if (LOG.isDebugEnabled()) {
-					LOG.debug("Digested ({}) message to timestamp is {}", new Object[] { timestampDigestAlgorithm, Hex.encodeHexString(timestampDigest) });
+					LOG.debug("Digested ({}) message to timestamp is {}", new Object[] { timestampDigestAlgorithm, Utils.toHex(timestampDigest) });
 				}
 				final TimeStampToken timeStampToken = tspSource.getTimeStampResponse(timestampDigestAlgorithm, timestampDigest);
 
@@ -281,7 +272,7 @@ abstract class CAdESSignatureExtension implements SignatureExtension<CAdESSignat
 				}
 				if (LOG.isDebugEnabled()) {
 					final byte[] messageImprintDigest = timeStampToken.getTimeStampInfo().getMessageImprintDigest();
-					LOG.debug("Digested ({}) message in timestamp is {}", new Object[] { timestampDigestAlgorithm, Hex.encodeHexString(messageImprintDigest) });
+					LOG.debug("Digested ({}) message in timestamp is {}", new Object[] { timestampDigestAlgorithm, Utils.toHex(messageImprintDigest) });
 				}
 				encodedTimeStampToken = timeStampToken.getEncoded();
 			}
@@ -311,8 +302,6 @@ abstract class CAdESSignatureExtension implements SignatureExtension<CAdESSignat
 			final byte[] newTimeStampTokenBytes = cmsSignedDataTimeStampToken.getEncoded();
 			return DSSASN1Utils.toASN1Primitive(newTimeStampTokenBytes);
 		} catch (IOException e) {
-			throw new DSSException(e);
-		} catch (CMSException e) {
 			throw new DSSException(e);
 		}
 

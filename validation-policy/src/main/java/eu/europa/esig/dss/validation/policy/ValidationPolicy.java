@@ -241,6 +241,10 @@ public interface ValidationPolicy {
 	 */
 	LevelConstraint getCertificateNotOnHoldConstraint(Context context, SubContext subContext);
 
+	LevelConstraint getCertificateNotSelfSignedConstraint(Context context, SubContext subContext);
+
+	LevelConstraint getCertificateSelfSignedConstraint(Context context, SubContext subContext);
+
 	MultiValuesConstraint getTrustedServiceTypeIdentifierConstraint(Context context);
 
 	MultiValuesConstraint getTrustedServiceStatusConstraint(Context context);
@@ -271,12 +275,6 @@ public interface ValidationPolicy {
 	 *         null otherwise.
 	 */
 	LevelConstraint getSigningCertificateRecognitionConstraint(Context context);
-
-	/**
-	 * @return {@code LevelConstraint} if Signed for a given context element is present in the constraint file, null
-	 *         otherwise.
-	 */
-	LevelConstraint getSigningCertificateSignedConstraint(Context context);
 
 	/**
 	 * @return {@code LevelConstraint} if SigningCertificateAttribute for a given context element is present in the
@@ -361,6 +359,8 @@ public interface ValidationPolicy {
 	LevelConstraint getCertificateAuthorityInfoAccessPresentConstraint(Context context, SubContext subContext);
 
 	LevelConstraint getCertificateRevocationInfoAccessPresentConstraint(Context context, SubContext subContext);
+
+	LevelConstraint getRevocationCertHashMatchConstraint(Context context, SubContext subContext);
 
 	MultiValuesConstraint getCertificatePolicyIdsConstraint(Context context, SubContext subContext);
 

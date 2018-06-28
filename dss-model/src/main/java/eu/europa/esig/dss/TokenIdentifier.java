@@ -22,8 +22,6 @@ package eu.europa.esig.dss;
 
 import java.io.Serializable;
 
-import javax.xml.bind.DatatypeConverter;
-
 import eu.europa.esig.dss.x509.Token;
 
 /**
@@ -43,9 +41,11 @@ public final class TokenIdentifier implements Serializable {
 
 	/**
 	 * Return an ID conformant to XML Id
+	 * 
+	 * @return the XML encoded ID
 	 */
 	public String asXmlId() {
-		return DatatypeConverter.printHexBinary(tokenDigest.getValue());
+		return tokenDigest.getHexValue();
 	}
 
 	@Override
