@@ -301,7 +301,7 @@ abstract class CAdESSignatureExtension implements SignatureExtension<CAdESSignat
 			}
 			final byte[] newTimeStampTokenBytes = cmsSignedDataTimeStampToken.getEncoded();
 			return DSSASN1Utils.toASN1Primitive(newTimeStampTokenBytes);
-		} catch (IOException e) {
+		} catch (Exception e) {
 			throw new DSSException(e);
 		}
 

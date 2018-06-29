@@ -50,6 +50,8 @@ import org.apache.pdfbox.pdmodel.interactive.annotation.PDAnnotationWidget;
 import org.apache.pdfbox.pdmodel.interactive.digitalsignature.PDSignature;
 import org.apache.pdfbox.pdmodel.interactive.digitalsignature.SignatureInterface;
 import org.apache.pdfbox.pdmodel.interactive.digitalsignature.SignatureOptions;
+import org.apache.pdfbox.pdmodel.interactive.digitalsignature.visible.PDVisibleSigProperties;
+import org.apache.pdfbox.pdmodel.interactive.digitalsignature.visible.PDVisibleSignDesigner;
 import org.apache.pdfbox.pdmodel.interactive.form.PDAcroForm;
 import org.apache.pdfbox.pdmodel.interactive.form.PDSignatureField;
 import org.slf4j.Logger;
@@ -66,6 +68,8 @@ import eu.europa.esig.dss.pades.CertificationPermission;
 import eu.europa.esig.dss.pades.PAdESSignatureParameters;
 import eu.europa.esig.dss.pades.SignatureFieldParameters;
 import eu.europa.esig.dss.pades.SignatureImageParameters;
+import eu.europa.esig.dss.pades.signature.visible.ImageAndResolution;
+import eu.europa.esig.dss.pades.signature.visible.ImageUtils;
 import eu.europa.esig.dss.pdf.DSSDictionaryCallback;
 import eu.europa.esig.dss.pdf.PDFSignatureService;
 import eu.europa.esig.dss.pdf.PdfDict;
@@ -155,8 +159,8 @@ class PdfBoxSignatureService implements PDFSignatureService {
 			};
 
 			options.setPreferredSignatureSize(parameters.getSignatureSize());
-			if (parameters.getImageParameters() != null) {
-				fillImageParameters(pdDocument, parameters.getImageParameters(), options);
+			if (parameters.getSignatureImageParameters() != null) {
+				fillImageParameters(pdDocument, parameters.getSignatureImageParameters(), options);
 			}
 			pdDocument.addSignature(pdSignature, signatureInterface, options);
 
