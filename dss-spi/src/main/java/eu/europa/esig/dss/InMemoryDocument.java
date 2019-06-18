@@ -1,19 +1,19 @@
 /**
  * DSS - Digital Signature Services
  * Copyright (C) 2015 European Commission, provided under the CEF programme
- *
+ * 
  * This file is part of the "DSS - Digital Signature Services" project.
- *
+ * 
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- *
+ * 
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
@@ -21,8 +21,6 @@
 package eu.europa.esig.dss;
 
 import java.io.ByteArrayInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.InputStream;
 
 import eu.europa.esig.dss.utils.Utils;
@@ -30,9 +28,7 @@ import eu.europa.esig.dss.utils.Utils;
 /**
  * In memory representation of a document
  *
- *
  */
-
 public class InMemoryDocument extends CommonDocument {
 
 	private byte[] bytes;
@@ -85,9 +81,8 @@ public class InMemoryDocument extends CommonDocument {
 	 *
 	 * @param inputStream
 	 *            input stream representing the document
-	 * @throws DSSException
 	 */
-	public InMemoryDocument(final InputStream inputStream) throws DSSException {
+	public InMemoryDocument(final InputStream inputStream) {
 		this(DSSUtils.toByteArray(inputStream), null, null);
 	}
 
@@ -98,9 +93,8 @@ public class InMemoryDocument extends CommonDocument {
 	 *            input stream representing the document
 	 * @param name
 	 *            the file name if the data originates from a file
-	 * @throws IOException
 	 */
-	public InMemoryDocument(final InputStream inputStream, final String name) throws DSSException {
+	public InMemoryDocument(final InputStream inputStream, final String name) {
 		this(DSSUtils.toByteArray(inputStream), name);
 	}
 
@@ -113,54 +107,22 @@ public class InMemoryDocument extends CommonDocument {
 	 *            the file name if the data originates from a file
 	 * @param mimeType
 	 *            the mime type of the file if the data originates from a file
-	 * @throws IOException
 	 */
-	public InMemoryDocument(final InputStream inputStream, final String name, final MimeType mimeType) throws DSSException {
+	public InMemoryDocument(final InputStream inputStream, final String name, final MimeType mimeType) {
 		this(DSSUtils.toByteArray(inputStream), name, mimeType);
 	}
 
 	@Override
-	public InputStream openStream() throws DSSException {
-		final ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(bytes);
-		return byteArrayInputStream;
+	public InputStream openStream() {
+		return new ByteArrayInputStream(bytes);
 	}
 
-	public byte[] getBytes() throws DSSException {
+	public byte[] getBytes() {
 		return bytes;
 	}
 
 	public void setBytes(byte[] bytes) {
 		this.bytes = bytes;
-	}
-
-	@Override
-	public String getAbsolutePath() {
-		return absolutePath;
-	}
-
-	@Override
-	public void setAbsolutePath(final String absolutePath) {
-		this.absolutePath = absolutePath;
-	}
-
-	@Override
-	public void save(final String filePath) {
-		FileOutputStream fos = null;
-		try {
-			fos = new FileOutputStream(filePath);
-			Utils.write(getBytes(), fos);
-		} catch (IOException e) {
-			throw new DSSException(e);
-		} finally {
-			Utils.closeQuietly(fos);
-		}
-	}
-
-	@Override
-	public String getDigest(final DigestAlgorithm digestAlgorithm) {
-		final byte[] digestBytes = DSSUtils.digest(digestAlgorithm, bytes);
-		final String base64Encode = Utils.toBase64(digestBytes);
-		return base64Encode;
 	}
 
 	public String getBase64Encoded() {

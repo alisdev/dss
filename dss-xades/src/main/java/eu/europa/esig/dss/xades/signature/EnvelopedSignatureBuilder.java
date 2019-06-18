@@ -1,19 +1,19 @@
 /**
  * DSS - Digital Signature Services
  * Copyright (C) 2015 European Commission, provided under the CEF programme
- *
+ * 
  * This file is part of the "DSS - Digital Signature Services" project.
- *
+ * 
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- *
+ * 
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
@@ -26,23 +26,24 @@ import java.util.List;
 import javax.xml.crypto.dsig.CanonicalizationMethod;
 import javax.xml.crypto.dsig.XMLSignature;
 
-import org.apache.xml.security.transforms.Transforms;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 import eu.europa.esig.dss.DSSDocument;
-import eu.europa.esig.dss.DSSException;
+import eu.europa.esig.dss.DigestAlgorithm;
 import eu.europa.esig.dss.DomUtils;
 import eu.europa.esig.dss.InMemoryDocument;
 import eu.europa.esig.dss.utils.Utils;
 import eu.europa.esig.dss.validation.CertificateVerifier;
-import eu.europa.esig.dss.xades.DSSReference;
-import eu.europa.esig.dss.xades.DSSTransform;
 import eu.europa.esig.dss.xades.DSSXMLUtils;
 import eu.europa.esig.dss.xades.XAdESSignatureParameters;
 import eu.europa.esig.dss.xades.XPathQueryHolder;
+import eu.europa.esig.dss.xades.reference.CanonicalizationTransform;
+import eu.europa.esig.dss.xades.reference.DSSReference;
+import eu.europa.esig.dss.xades.reference.DSSTransform;
+import eu.europa.esig.dss.xades.reference.XPathEnvelopedSignatureTransform;
 
 /**
  * This class handles the specifics of the enveloped XML signature
@@ -88,25 +89,25 @@ class EnvelopedSignatureBuilder extends XAdESSignatureBuilder {
 	protected DSSReference createReference(DSSDocument document, int referenceIndex) {
 
 		DSSReference dssReference = new DSSReference();
-		dssReference.setId("r-id-" + referenceIndex);
+		dssReference.setId(REFERENCE_ID_SUFFIX + deterministicId + "-" + referenceIndex);
+		// XMLDSIG : 4.4.3.2
+		// URI=""
+		// Identifies the node-set (minus any comment nodes) of the XML resource
+		// containing the signature
 		dssReference.setUri("");
 		dssReference.setContents(document);
-		dssReference.setDigestMethodAlgorithm(params.getDigestAlgorithm());
+		DigestAlgorithm digestAlgorithm = getReferenceDigestAlgorithmOrDefault(params);
+		dssReference.setDigestMethodAlgorithm(digestAlgorithm);
 
 		final List<DSSTransform> dssTransformList = new ArrayList<DSSTransform>();
 
 		// For parallel signatures
-		DSSTransform dssTransform = new DSSTransform();
-		dssTransform.setAlgorithm(Transforms.TRANSFORM_XPATH);
-		dssTransform.setElementName(DS_XPATH);
-		dssTransform.setNamespace(XMLSignature.XMLNS);
-		dssTransform.setTextContent(NOT_ANCESTOR_OR_SELF_DS_SIGNATURE);
-		dssTransformList.add(dssTransform);
+		XPathEnvelopedSignatureTransform xPathTransform = new XPathEnvelopedSignatureTransform();
+		dssTransformList.add(xPathTransform);
 
 		// Canonicalization is the last operation, its better to operate the canonicalization on the smaller document
-		dssTransform = new DSSTransform();
-		dssTransform.setAlgorithm(CanonicalizationMethod.EXCLUSIVE);
-		dssTransformList.add(dssTransform);
+		CanonicalizationTransform canonicalizationTransform = new CanonicalizationTransform(CanonicalizationMethod.EXCLUSIVE);
+		dssTransformList.add(canonicalizationTransform);
 
 		dssReference.setTransforms(dssTransformList);
 
@@ -146,38 +147,6 @@ class EnvelopedSignatureBuilder extends XAdESSignatureBuilder {
 		}
 		byte[] transformedReferenceBytes = applyTransformations(dssDocument, transforms, nodeToTransform);
 		return new InMemoryDocument(transformedReferenceBytes);
-	}
-
-	private byte[] applyTransformations(DSSDocument dssDocument, final List<DSSTransform> transforms, Node nodeToTransform) {
-		byte[] transformedReferenceBytes = null;
-		for (final DSSTransform transform : transforms) {
-
-			final String transformAlgorithm = transform.getAlgorithm();
-			if (Transforms.TRANSFORM_XPATH.equals(transformAlgorithm)) {
-
-				final DSSTransformXPath transformXPath = new DSSTransformXPath(transform);
-				// At the moment it is impossible to go through a medium other than byte array (Set<Node>, octet stream,
-				// Node). Further investigation is needed.
-				final byte[] transformedBytes = nodeToTransform == null ? transformXPath.transform(dssDocument) : transformXPath.transform(nodeToTransform);
-				dssDocument = new InMemoryDocument(transformedBytes);
-				nodeToTransform = DomUtils.buildDOM(dssDocument);
-			} else if (DSSXMLUtils.canCanonicalize(transformAlgorithm)) {
-
-				if (nodeToTransform == null) {
-					nodeToTransform = DomUtils.buildDOM(dssDocument);
-				}
-				transformedReferenceBytes = DSSXMLUtils.canonicalizeSubtree(transformAlgorithm, nodeToTransform);
-				// The supposition is made that the last transformation is the canonicalization
-				break;
-			} else if (CanonicalizationMethod.ENVELOPED.equals(transformAlgorithm)) {
-
-				// do nothing the new signature is not existing yet!
-				// removeExistingSignatures(document);
-			} else {
-				throw new DSSException("The transformation is not implemented yet, please transform the reference before signing!");
-			}
-		}
-		return transformedReferenceBytes;
 	}
 
 	private static boolean isXPointer(final String uri) {

@@ -1,3 +1,23 @@
+/**
+ * DSS - Digital Signature Services
+ * Copyright (C) 2015 European Commission, provided under the CEF programme
+ * 
+ * This file is part of the "DSS - Digital Signature Services" project.
+ * 
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ */
 package eu.europa.esig.dss.validation.process.vpfswatsp.checks.pcv;
 
 import java.util.Date;
@@ -21,6 +41,7 @@ import eu.europa.esig.dss.validation.process.vpfswatsp.checks.pcv.checks.Validat
 import eu.europa.esig.dss.validation.process.vpfswatsp.checks.vts.ValidationTimeSliding;
 import eu.europa.esig.dss.validation.reports.wrapper.CertificateWrapper;
 import eu.europa.esig.dss.validation.reports.wrapper.DiagnosticData;
+import eu.europa.esig.dss.validation.reports.wrapper.RevocationWrapper;
 import eu.europa.esig.dss.validation.reports.wrapper.TokenProxy;
 import eu.europa.esig.jaxb.policy.CryptographicConstraint;
 import eu.europa.esig.jaxb.policy.LevelConstraint;
@@ -113,10 +134,13 @@ public class PastCertificateValidation extends Chain<XmlPCV> {
 				intervalNotAfter = certificate.getNotAfter();
 			}
 
-			if (SubContext.CA_CERTIFICATE.equals(subContext) && certificate.isRevoked()) {
-				Date caRevocationDate = certificate.getLatestRevocationData().getRevocationDate();
-				if (caRevocationDate != null && intervalNotAfter.after(caRevocationDate)) {
-					intervalNotAfter = caRevocationDate;
+			if (SubContext.CA_CERTIFICATE.equals(subContext)) {
+				RevocationWrapper latestRevocation = certificate.getLatestRevocationData();
+				if (latestRevocation != null && latestRevocation.isRevoked()) {
+					Date caRevocationDate = latestRevocation.getRevocationDate();
+					if (caRevocationDate != null && intervalNotAfter.after(caRevocationDate)) {
+						intervalNotAfter = caRevocationDate;
+					}
 				}
 
 				// TODO REVOKED_CA_NO_POE
@@ -171,7 +195,7 @@ public class PastCertificateValidation extends Chain<XmlPCV> {
 
 	private ChainItem<XmlPCV> prospectiveCertificateChain() {
 		LevelConstraint constraint = policy.getProspectiveCertificateChainConstraint(context);
-		return new ProspectiveCertificateChainCheck(result, token, diagnosticData, constraint);
+		return new ProspectiveCertificateChainCheck(result, token, constraint);
 	}
 
 	private ChainItem<XmlPCV> certificateSignatureValid(CertificateWrapper certificate, SubContext subContext) {

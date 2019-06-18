@@ -1,19 +1,19 @@
 /**
  * DSS - Digital Signature Services
  * Copyright (C) 2015 European Commission, provided under the CEF programme
- *
+ * 
  * This file is part of the "DSS - Digital Signature Services" project.
- *
+ * 
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- *
+ * 
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
@@ -23,6 +23,7 @@ package eu.europa.esig.dss.client.tsp;
 import java.io.IOException;
 
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
+import org.bouncycastle.asn1.cmp.PKIFailureInfo;
 import org.bouncycastle.tsp.TSPException;
 import org.bouncycastle.tsp.TimeStampRequest;
 import org.bouncycastle.tsp.TimeStampRequestGenerator;
@@ -45,7 +46,7 @@ import eu.europa.esig.dss.x509.tsp.TSPSource;
  */
 public class OnlineTSPSource implements TSPSource {
 
-	private static final Logger logger = LoggerFactory.getLogger(OnlineTSPSource.class);
+	private static final Logger LOG = LoggerFactory.getLogger(OnlineTSPSource.class);
 
 	/**
 	 * The URL of the TSP server
@@ -78,6 +79,7 @@ public class OnlineTSPSource implements TSPSource {
 	 * Build a OnlineTSPSource that will query the specified URL
 	 *
 	 * @param tspServer
+	 *            the tsp URL
 	 */
 	public OnlineTSPSource(final String tspServer) {
 		this.tspServer = tspServer;
@@ -87,6 +89,7 @@ public class OnlineTSPSource implements TSPSource {
 	 * Set the URL of the TSA
 	 *
 	 * @param tspServer
+	 *            the TSA url
 	 */
 	public void setTspServer(final String tspServer) {
 		this.tspServer = tspServer;
@@ -96,6 +99,7 @@ public class OnlineTSPSource implements TSPSource {
 	 * Set the request policy
 	 *
 	 * @param policyOid
+	 *            the policy oid to use
 	 */
 	public void setPolicyOid(final String policyOid) {
 		this.policyOid = new ASN1ObjectIdentifier(policyOid);
@@ -124,9 +128,9 @@ public class OnlineTSPSource implements TSPSource {
 	@Override
 	public TimeStampToken getTimeStampResponse(final DigestAlgorithm digestAlgorithm, final byte[] digest) throws DSSException {
 		try {
-			if (logger.isTraceEnabled()) {
-				logger.trace("Timestamp digest algorithm: " + digestAlgorithm.getName());
-				logger.trace("Timestamp digest value    : " + Utils.toHex(digest));
+			if (LOG.isTraceEnabled()) {
+				LOG.trace("Timestamp digest algorithm: {}", digestAlgorithm.getName());
+				LOG.trace("Timestamp digest value    : {}", Utils.toHex(digest));
 			}
 
 			// Setup the time stamp request
@@ -155,18 +159,25 @@ public class OnlineTSPSource implements TSPSource {
 			// Handle the TSA response
 			final TimeStampResponse timeStampResponse = new TimeStampResponse(respBytes);
 
-			// Validates nonce, policy id, ... if present
+			// Validates token, nonce, policy id, message digest ...
 			timeStampResponse.validate(timeStampRequest);
 
 			String statusString = timeStampResponse.getStatusString();
 			if (statusString != null) {
-				logger.info("Status: " + statusString);
+				LOG.info("TSP Status: {}", statusString);
+			}
+
+			PKIFailureInfo failInfo = timeStampResponse.getFailInfo();
+			if (failInfo != null) {
+				LOG.warn("TSP Failure info: {}", failInfo);
 			}
 
 			final TimeStampToken timeStampToken = timeStampResponse.getTimeStampToken();
 
 			if (timeStampToken != null) {
-				logger.info("TSP SID : SN " + timeStampToken.getSID().getSerialNumber() + ", Issuer " + timeStampToken.getSID().getIssuer());
+				LOG.info("TSP SID : SN {}, Issuer {}", timeStampToken.getSID().getSerialNumber(), timeStampToken.getSID().getIssuer());
+			} else {
+				throw new DSSException("No retrieved timestamp token (TSP Status : " + statusString + " / " + failInfo + ")");
 			}
 
 			return timeStampToken;

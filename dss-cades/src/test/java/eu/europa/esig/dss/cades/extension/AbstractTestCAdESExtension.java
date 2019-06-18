@@ -1,33 +1,33 @@
 /**
  * DSS - Digital Signature Services
  * Copyright (C) 2015 European Commission, provided under the CEF programme
- *
+ * 
  * This file is part of the "DSS - Digital Signature Services" project.
- *
+ * 
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- *
+ * 
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 package eu.europa.esig.dss.cades.extension;
 
-import java.security.cert.X509CRL;
-import java.util.Date;
-
-import org.bouncycastle.asn1.x509.CRLReason;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.UUID;
 
 import eu.europa.esig.dss.DSSDocument;
-import eu.europa.esig.dss.InMemoryDocument;
-import eu.europa.esig.dss.SignatureAlgorithm;
+import eu.europa.esig.dss.DSSException;
+import eu.europa.esig.dss.FileDocument;
 import eu.europa.esig.dss.SignaturePackaging;
 import eu.europa.esig.dss.SignatureValue;
 import eu.europa.esig.dss.ToBeSigned;
@@ -35,57 +35,53 @@ import eu.europa.esig.dss.cades.CAdESSignatureParameters;
 import eu.europa.esig.dss.cades.signature.CAdESService;
 import eu.europa.esig.dss.extension.AbstractTestExtension;
 import eu.europa.esig.dss.signature.DocumentSignatureService;
-import eu.europa.esig.dss.test.gen.CRLGenerator;
-import eu.europa.esig.dss.test.gen.CertificateService;
-import eu.europa.esig.dss.test.mock.MockCRLSource;
-import eu.europa.esig.dss.test.mock.MockPrivateKeyEntry;
-import eu.europa.esig.dss.test.mock.MockTSPSource;
-import eu.europa.esig.dss.validation.CertificateVerifier;
-import eu.europa.esig.dss.validation.CommonCertificateVerifier;
+import eu.europa.esig.dss.x509.tsp.TSPSource;
 
 public abstract class AbstractTestCAdESExtension extends AbstractTestExtension<CAdESSignatureParameters> {
 
-	private X509CRL generatedCRL;
-
 	@Override
-	protected DSSDocument getSignedDocument() throws Exception {
-		CertificateService certificateService = new CertificateService();
-
-		MockPrivateKeyEntry issuerEntry = certificateService.generateSelfSignedCertificate(SignatureAlgorithm.RSA_SHA256, true);
-		MockPrivateKeyEntry entryUserA = certificateService.generateCertificateChain(SignatureAlgorithm.RSA_SHA256, issuerEntry);
-		MockPrivateKeyEntry entryUserB = certificateService.generateCertificateChain(SignatureAlgorithm.RSA_SHA256, issuerEntry);
-
-		CRLGenerator crlGenerator = new CRLGenerator();
-		generatedCRL = crlGenerator.generateCRL(entryUserB.getCertificate().getCertificate(), issuerEntry, new Date(), CRLReason.privilegeWithdrawn);
-
-		DSSDocument document = new InMemoryDocument("Hello world!".getBytes(), "test.bin");
-
-		// Sign
-		CAdESSignatureParameters signatureParameters = new CAdESSignatureParameters();
-		signatureParameters.setSigningCertificate(entryUserA.getCertificate());
-		signatureParameters.setCertificateChain(entryUserA.getCertificateChain());
-		signatureParameters.setSignaturePackaging(SignaturePackaging.ENVELOPING);
-		signatureParameters.setSignatureLevel(getOriginalSignatureLevel());
-
-		CertificateVerifier certificateVerifier = new CommonCertificateVerifier();
-
-		CAdESService service = new CAdESService(certificateVerifier);
-		service.setTspSource(new MockTSPSource(certificateService.generateTspCertificate(SignatureAlgorithm.RSA_SHA256)));
-
-		ToBeSigned dataToSign = service.getDataToSign(document, signatureParameters);
-
-		SignatureValue signatureValue = sign(signatureParameters.getSignatureAlgorithm(), entryUserA, dataToSign);
-		final DSSDocument signedDocument = service.signDocument(document, signatureParameters, signatureValue);
-		return signedDocument;
+	protected TSPSource getUsedTSPSourceAtSignatureTime() {
+		return getGoodTsa();
 	}
 
 	@Override
-	protected DocumentSignatureService<CAdESSignatureParameters> getSignatureServiceToExtend() throws Exception {
-		CommonCertificateVerifier certificateVerifier = new CommonCertificateVerifier();
-		certificateVerifier.setCrlSource(new MockCRLSource(generatedCRL));
-		CAdESService service = new CAdESService(certificateVerifier);
-		CertificateService certificateService = new CertificateService();
-		service.setTspSource(new MockTSPSource(certificateService.generateTspCertificate(SignatureAlgorithm.RSA_SHA256)));
+	protected TSPSource getUsedTSPSourceAtExtensionTime() {
+		return getAlternateGoodTsa();
+	}
+
+	@Override
+	protected DSSDocument getOriginalDocument() {
+		File originalDoc = new File("target/original-" + UUID.randomUUID().toString() + ".bin");
+		try (FileOutputStream fos = new FileOutputStream(originalDoc)) {
+			fos.write("Hello world!".getBytes());
+		} catch (IOException e) {
+			throw new DSSException("Unable to create the original document", e);
+		}
+		return new FileDocument(originalDoc);
+	}
+
+	@Override
+	protected DSSDocument getSignedDocument(DSSDocument doc) {
+		// Sign
+		CAdESSignatureParameters signatureParameters = new CAdESSignatureParameters();
+		signatureParameters.setSigningCertificate(getSigningCert());
+		signatureParameters.setCertificateChain(getCertificateChain());
+		signatureParameters.setSignaturePackaging(SignaturePackaging.ENVELOPING);
+		signatureParameters.setSignatureLevel(getOriginalSignatureLevel());
+
+		CAdESService service = new CAdESService(getCompleteCertificateVerifier());
+		service.setTspSource(getUsedTSPSourceAtSignatureTime());
+
+		ToBeSigned dataToSign = service.getDataToSign(doc, signatureParameters);
+		SignatureValue signatureValue = getToken().sign(dataToSign, signatureParameters.getDigestAlgorithm(), getPrivateKeyEntry());
+		return service.signDocument(doc, signatureParameters, signatureValue);
+
+	}
+
+	@Override
+	protected DocumentSignatureService<CAdESSignatureParameters> getSignatureServiceToExtend() {
+		CAdESService service = new CAdESService(getCompleteCertificateVerifier());
+		service.setTspSource(getUsedTSPSourceAtExtensionTime());
 		return service;
 	}
 
@@ -95,4 +91,10 @@ public abstract class AbstractTestCAdESExtension extends AbstractTestExtension<C
 		extensionParameters.setSignatureLevel(getFinalSignatureLevel());
 		return extensionParameters;
 	}
+
+	@Override
+	protected String getSigningAlias() {
+		return GOOD_USER;
+	}
+
 }

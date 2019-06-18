@@ -1,19 +1,19 @@
 /**
  * DSS - Digital Signature Services
  * Copyright (C) 2015 European Commission, provided under the CEF programme
- *
+ * 
  * This file is part of the "DSS - Digital Signature Services" project.
- *
+ * 
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- *
+ * 
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
@@ -45,27 +45,44 @@ import eu.europa.esig.dss.validation.CertificateVerifier;
 import eu.europa.esig.dss.validation.ValidationContext;
 import eu.europa.esig.dss.x509.CertificateToken;
 import eu.europa.esig.dss.x509.RevocationToken;
-import eu.europa.esig.dss.x509.crl.CRLToken;
-import eu.europa.esig.dss.x509.ocsp.OCSPToken;
+import eu.europa.esig.dss.x509.revocation.crl.CRLToken;
+import eu.europa.esig.dss.x509.revocation.ocsp.OCSPToken;
 
 /**
  * Contains XAdES-C profile aspects
  *
- *
  */
-
 public class XAdESLevelC extends XAdESLevelBaselineT {
 
 	/**
 	 * The default constructor for XAdESLevelC.
-	 *
-	 * @throws javax.xml.datatype.DatatypeConfigurationException
 	 */
 	public XAdESLevelC(CertificateVerifier certificateVerifier) {
-
 		super(certificateVerifier);
 	}
 
+	/**
+	 * This method incorporates CRL References like
+	 * 
+	 * <pre>
+	 * {@code
+	 *	 <xades:CRLRefs>
+	 *	 	<xades:CRLRef>
+	 *			<xades:DigestAlgAndValue>
+	 *				<ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>
+	 *				<ds:DigestValue>G+z+DaZ6X44wEOueVYvZGmTh4dBkjjctKxcJYEV4HmU=</ds:DigestValue>
+	 *			</xades:DigestAlgAndValue>
+	 *			<xades:CRLIdentifier URI="LevelACAOK.crl">
+	 *				<xades:Issuer>CN=LevelACAOK,OU=Plugtests_STF-428_2011-2012,O=ETSI,C=FR</xades:Issuer>
+	 *				<xades:IssueTime>2012-03-13T13:58:28.000-03:00</xades:IssueTime>
+	 *			<xades:Number>4415260066222</xades:Number>
+	 * }
+	 * </pre>
+	 * 
+	 * @param completeRevocationRefsDom
+	 * @param processedRevocationTokens
+	 * @throws DSSException
+	 */
 	private void incorporateCRLRefs(Element completeRevocationRefsDom, final Set<RevocationToken> processedRevocationTokens) throws DSSException {
 
 		if (processedRevocationTokens.isEmpty()) {
@@ -84,18 +101,8 @@ public class XAdESLevelC extends XAdESLevelBaselineT {
 		if (!containsCrlToken) {
 			return;
 		}
-		// <xades:CRLRefs>
-		// ...<xades:CRLRef>
-		// ......<xades:DigestAlgAndValue>
-		// .........<ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>
-		// .........<ds:DigestValue>G+z+DaZ6X44wEOueVYvZGmTh4dBkjjctKxcJYEV4HmU=</ds:DigestValue>
-		// ......</xades:DigestAlgAndValue>
-		// ......<xades:CRLIdentifier URI="LevelACAOK.crl">
-		// ...<xades:Issuer>CN=LevelACAOK,OU=Plugtests_STF-428_2011-2012,O=ETSI,C=FR</xades:Issuer>
-		// ...<xades:IssueTime>2012-03-13T13:58:28.000-03:00</xades:IssueTime>
-		// ...<xades:Number>4415260066222</xades:Number>
 
-		final Element crlRefsDom = DomUtils.addElement(documentDom, completeRevocationRefsDom, XAdESNamespaces.XAdES, "xades:CRLRefs");
+		final Element crlRefsDom = DomUtils.addElement(documentDom, completeRevocationRefsDom, XAdESNamespaces.XAdES, XADES_CRL_REFS);
 
 		for (final RevocationToken revocationToken : processedRevocationTokens) {
 
@@ -103,24 +110,24 @@ public class XAdESLevelC extends XAdESLevelBaselineT {
 
 				final CRLToken crl = ((CRLToken) revocationToken);
 
-				final Element crlRefDom = DomUtils.addElement(documentDom, crlRefsDom, XAdESNamespaces.XAdES, "xades:CRLRef");
+				final Element crlRefDom = DomUtils.addElement(documentDom, crlRefsDom, XAdESNamespaces.XAdES, XADES_CRL_REF);
 
-				final Element digestAlgAndValueDom = DomUtils.addElement(documentDom, crlRefDom, XAdESNamespaces.XAdES, "xades:DigestAlgAndValue");
+				final Element digestAlgAndValueDom = DomUtils.addElement(documentDom, crlRefDom, XAdESNamespaces.XAdES, XADES_DIGEST_ALG_AND_VALUE);
 				// TODO: to be added as field to eu.europa.esig.dss.AbstractSignatureParameters.
 				DigestAlgorithm digestAlgorithm = DigestAlgorithm.SHA1;
 				incorporateDigestMethod(digestAlgAndValueDom, digestAlgorithm);
 
 				incorporateDigestValue(digestAlgAndValueDom, digestAlgorithm, revocationToken);
 
-				final Element crlIdentifierDom = DomUtils.addElement(documentDom, crlRefDom, XAdESNamespaces.XAdES, "xades:CRLIdentifier");
+				final Element crlIdentifierDom = DomUtils.addElement(documentDom, crlRefDom, XAdESNamespaces.XAdES, XADES_CRL_IDENTIFIER);
 				// crlIdentifierDom.setAttribute("URI",".crl");
 				final String issuerX500PrincipalName = crl.getIssuerX500Principal().getName();
-				DomUtils.addTextElement(documentDom, crlIdentifierDom, XAdESNamespaces.XAdES, "xades:Issuer", issuerX500PrincipalName);
+				DomUtils.addTextElement(documentDom, crlIdentifierDom, XAdESNamespaces.XAdES, XADES_ISSUER, issuerX500PrincipalName);
 
 				final Date thisUpdate = crl.getThisUpdate();
 				XMLGregorianCalendar xmlGregorianCalendar = DomUtils.createXMLGregorianCalendar(thisUpdate);
 				final String thisUpdateAsXmlFormat = xmlGregorianCalendar.toXMLFormat();
-				DomUtils.addTextElement(documentDom, crlIdentifierDom, XAdESNamespaces.XAdES, "xades:IssueTime", thisUpdateAsXmlFormat);
+				DomUtils.addTextElement(documentDom, crlIdentifierDom, XAdESNamespaces.XAdES, XADES_ISSUER_TIME, thisUpdateAsXmlFormat);
 
 				// DSSXMLUtils.addTextElement(documentDom, crlRefDom, XAdESNamespaces.XAdES, "xades:Number", ???);
 			}
@@ -128,6 +135,26 @@ public class XAdESLevelC extends XAdESLevelBaselineT {
 	}
 
 	/**
+	 * This method adds OCSP References like :
+	 * 
+	 * <pre>
+	 * {@code
+	 * 	<xades:CRLRefs/>
+	 *	<xades:OCSPRefs>
+	 *		<xades:OCSPRef>
+	 *			<xades:OCSPIdentifier>
+	 *				<xades:ResponderID>
+	 *					<xades:ByName>C=AA,O=DSS,CN=OCSP A</xades:ByName>
+	 *				</xades:ResponderID>
+	 *				<xades:ProducedAt>2013-11-25T12:33:34.000+01:00</xades:ProducedAt>
+	 *			</xades:OCSPIdentifier>
+	 *			<xades:DigestAlgAndValue>
+	 *				<ds:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/>
+	 *				<ds:DigestValue>O1uHdchN+zFzbGrBg2FP3/idD0k=</ds:DigestValue>
+	 *				...
+	 *}
+	 * </pre>
+	 * 
 	 * @param completeRevocationRefsDom
 	 * @param processedRevocationTokens
 	 * @throws eu.europa.esig.dss.DSSException
@@ -151,20 +178,7 @@ public class XAdESLevelC extends XAdESLevelBaselineT {
 			return;
 		}
 
-		// ...<xades:CRLRefs/>
-		// ...<xades:OCSPRefs>
-		// ......<xades:OCSPRef>
-		// .........<xades:OCSPIdentifier>
-		// ............<xades:ResponderID>
-		// ...............<xades:ByName>C=AA,O=DSS,CN=OCSP A</xades:ByName>
-		// ............</xades:ResponderID>
-		// ............<xades:ProducedAt>2013-11-25T12:33:34.000+01:00</xades:ProducedAt>
-		// .........</xades:OCSPIdentifier>
-		// .........<xades:DigestAlgAndValue>
-		// ............<ds:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/>
-		// ............<ds:DigestValue>O1uHdchN+zFzbGrBg2FP3/idD0k=</ds:DigestValue>
-
-		final Element ocspRefsDom = DomUtils.addElement(documentDom, completeRevocationRefsDom, XAdESNamespaces.XAdES, "xades:OCSPRefs");
+		final Element ocspRefsDom = DomUtils.addElement(documentDom, completeRevocationRefsDom, XAdESNamespaces.XAdES, XADES_OCSP_REFS);
 
 		for (RevocationToken revocationToken : processedRevocationTokens) {
 
@@ -173,10 +187,10 @@ public class XAdESLevelC extends XAdESLevelBaselineT {
 				BasicOCSPResp basicOcspResp = ((OCSPToken) revocationToken).getBasicOCSPResp();
 				if (basicOcspResp != null) {
 
-					final Element ocspRefDom = DomUtils.addElement(documentDom, ocspRefsDom, XAdESNamespaces.XAdES, "xades:OCSPRef");
+					final Element ocspRefDom = DomUtils.addElement(documentDom, ocspRefsDom, XAdESNamespaces.XAdES, XADES_OCSP_REF);
 
-					final Element ocspIdentifierDom = DomUtils.addElement(documentDom, ocspRefDom, XAdESNamespaces.XAdES, "xades:OCSPIdentifier");
-					final Element responderIDDom = DomUtils.addElement(documentDom, ocspIdentifierDom, XAdESNamespaces.XAdES, "xades:ResponderID");
+					final Element ocspIdentifierDom = DomUtils.addElement(documentDom, ocspRefDom, XAdESNamespaces.XAdES, XADES_OCSP_IDENTIFIER);
+					final Element responderIDDom = DomUtils.addElement(documentDom, ocspIdentifierDom, XAdESNamespaces.XAdES, XADES_OCSP_RESPONDER_ID);
 
 					final RespID responderId = basicOcspResp.getResponderId();
 					final ResponderID responderIdAsASN1Object = responderId.toASN1Primitive();
@@ -186,20 +200,20 @@ public class XAdESLevelC extends XAdESLevelBaselineT {
 						final ASN1OctetString keyHashOctetString = (ASN1OctetString) derTaggedObject.getObject();
 						final byte[] keyHashOctetStringBytes = keyHashOctetString.getOctets();
 						final String base65EncodedKeyHashOctetStringBytes = Utils.toBase64(keyHashOctetStringBytes);
-						DomUtils.addTextElement(documentDom, responderIDDom, XAdESNamespaces.XAdES, "xades:ByKey", base65EncodedKeyHashOctetStringBytes);
+						DomUtils.addTextElement(documentDom, responderIDDom, XAdESNamespaces.XAdES, XADES_BY_KEY, base65EncodedKeyHashOctetStringBytes);
 					} else {
 
 						final ASN1Primitive derObject = derTaggedObject.getObject();
 						final X500Name name = X500Name.getInstance(derObject);
-						DomUtils.addTextElement(documentDom, responderIDDom, XAdESNamespaces.XAdES, "xades:ByName", name.toString());
+						DomUtils.addTextElement(documentDom, responderIDDom, XAdESNamespaces.XAdES, XADES_BY_NAME, name.toString());
 					}
 
 					final Date producedAt = basicOcspResp.getProducedAt();
 					final XMLGregorianCalendar xmlGregorianCalendar = DomUtils.createXMLGregorianCalendar(producedAt);
 					final String producedAtXmlEncoded = xmlGregorianCalendar.toXMLFormat();
-					DomUtils.addTextElement(documentDom, ocspIdentifierDom, XAdESNamespaces.XAdES, "xades:ProducedAt", producedAtXmlEncoded);
+					DomUtils.addTextElement(documentDom, ocspIdentifierDom, XAdESNamespaces.XAdES, XADES_PRODUCED_AT, producedAtXmlEncoded);
 
-					final Element digestAlgAndValueDom = DomUtils.addElement(documentDom, ocspRefDom, XAdESNamespaces.XAdES, "xades:DigestAlgAndValue");
+					final Element digestAlgAndValueDom = DomUtils.addElement(documentDom, ocspRefDom, XAdESNamespaces.XAdES, XADES_DIGEST_ALG_AND_VALUE);
 					// TODO: to be added as field to eu.europa.esig.dss.AbstractSignatureParameters.
 					DigestAlgorithm digestAlgorithm = DigestAlgorithm.SHA1;
 					incorporateDigestMethod(digestAlgAndValueDom, digestAlgorithm);
@@ -217,11 +231,11 @@ public class XAdESLevelC extends XAdESLevelBaselineT {
 	 * signature up to (but not including ) the signer's certificate.<br>
 	 * A full set of references to the revocation data that have been used in the validation of the signer and CA
 	 * certificates.<br>
-	 * Adds <CompleteCertificateRefs> and <CompleteRevocationRefs> segments into <UnsignedSignatureProperties> element.
+	 * Adds {@code <CompleteCertificateRefs>} and {@code <CompleteRevocationRefs>} segments into
+	 * {@code <UnsignedSignatureProperties>} element.
 	 *
-	 * There SHALL be at most <b>one occurrence of CompleteRevocationRefs & CompleteCertificateRefs</b> properties in
-	 * the
-	 * signature. Old references must be removed.
+	 * There SHALL be at most <b>one occurrence of CompleteRevocationRefs and CompleteCertificateRefs</b> properties in
+	 * the signature. Old references must be removed.
 	 *
 	 * @see XAdESLevelBaselineT#extendSignatureTag()
 	 */
@@ -229,6 +243,7 @@ public class XAdESLevelC extends XAdESLevelBaselineT {
 	protected void extendSignatureTag() throws DSSException {
 
 		super.extendSignatureTag();
+		Element levelTUnsignedProperties = (Element) unsignedSignaturePropertiesDom.cloneNode(true);
 
 		final SignatureLevel signatureLevel = params.getSignatureLevel();
 		// for XAdES_XL the development is not conform with the standard
@@ -244,14 +259,12 @@ public class XAdESLevelC extends XAdESLevelBaselineT {
 
 			// XAdES-C: complete revocation references
 			Element toRemove = xadesSignature.getCompleteCertificateRefs();
-			if (toRemove != null) {
-				unsignedSignaturePropertiesDom.removeChild(toRemove);
-			}
+			removeChild(unsignedSignaturePropertiesDom, toRemove);
 
 			final Element completeCertificateRefsDom = DomUtils.addElement(documentDom, unsignedSignaturePropertiesDom, XAdESNamespaces.XAdES,
-					"xades:CompleteCertificateRefs");
+					XADES_COMPLETE_CERTIFICATE_REFS);
 
-			final Element certRefsDom = DomUtils.addElement(documentDom, completeCertificateRefsDom, XAdESNamespaces.XAdES, "xades:CertRefs");
+			final Element certRefsDom = DomUtils.addElement(documentDom, completeCertificateRefsDom, XAdESNamespaces.XAdES, XADES_CERT_REFS);
 
 			final CertificateToken certificateToken = xadesSignature.getSigningCertificateToken();
 			final Set<CertificateToken> processedCertificateTokens = validationContext.getProcessedCertificates();
@@ -262,15 +275,15 @@ public class XAdESLevelC extends XAdESLevelBaselineT {
 			incorporateCertificateRef(certRefsDom, x509CertificateProcessedList);
 
 			toRemove = xadesSignature.getCompleteRevocationRefs();
-			if (toRemove != null) {
-				unsignedSignaturePropertiesDom.removeChild(toRemove);
-			}
+			removeChild(unsignedSignaturePropertiesDom, toRemove);
 
 			// <xades:CompleteRevocationRefs>
 			final Element completeRevocationRefsDom = DomUtils.addElement(documentDom, unsignedSignaturePropertiesDom, XAdESNamespaces.XAdES,
-					"xades:CompleteRevocationRefs");
+					XADES_COMPLETE_REVOCATION_REFS);
 			incorporateCRLRefs(completeRevocationRefsDom, validationContext.getProcessedRevocations());
 			incorporateOCSPRefs(completeRevocationRefsDom, validationContext.getProcessedRevocations());
+			
+			unsignedSignaturePropertiesDom = indentIfPrettyPrint(unsignedSignaturePropertiesDom, levelTUnsignedProperties);
 		}
 	}
 }

@@ -1,3 +1,23 @@
+/**
+ * DSS - Digital Signature Services
+ * Copyright (C) 2015 European Commission, provided under the CEF programme
+ * 
+ * This file is part of the "DSS - Digital Signature Services" project.
+ * 
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ */
 package eu.europa.esig.dss.xades.encoding;
 
 import static org.hamcrest.core.IsEqual.equalTo;
@@ -24,10 +44,6 @@ public class EncodingXMLTest {
 
 	private static final String HELLO_WORLD = "Hello World";
 
-	static {
-		Security.addProvider(new BouncyCastleProvider());
-	}
-
 	@Test
 	public void test() throws Exception {
 		String test = "MEQCIEJNA0AElH/vEH9xLxvqrwCqh+yUh9ACL2vU/2eObRbTAiAxTLSWSioJrfSwPkKcypf+KCHvMGdwZbRWQHnZN2sDnQ==";
@@ -42,10 +58,10 @@ public class EncodingXMLTest {
 
 	@Test
 	public void testDSA() throws Exception {
-		KeyPairGenerator gen = KeyPairGenerator.getInstance("DSA", BouncyCastleProvider.PROVIDER_NAME);
+		KeyPairGenerator gen = KeyPairGenerator.getInstance("DSA");
 		KeyPair pair = gen.generateKeyPair();
 
-		Signature s = Signature.getInstance("SHA256withDSA", BouncyCastleProvider.PROVIDER_NAME);
+		Signature s = Signature.getInstance("SHA256withDSA");
 		s.initSign(pair.getPrivate());
 		s.update(HELLO_WORLD.getBytes());
 		byte[] signatureValue = s.sign();
@@ -56,10 +72,10 @@ public class EncodingXMLTest {
 
 	@Test
 	public void testRSA() throws Exception {
-		KeyPairGenerator gen = KeyPairGenerator.getInstance("RSA", BouncyCastleProvider.PROVIDER_NAME);
+		KeyPairGenerator gen = KeyPairGenerator.getInstance("RSA");
 		KeyPair pair = gen.generateKeyPair();
 
-		Signature s = Signature.getInstance("SHA256withRSA", BouncyCastleProvider.PROVIDER_NAME);
+		Signature s = Signature.getInstance("SHA256withRSA");
 		s.initSign(pair.getPrivate());
 		s.update(HELLO_WORLD.getBytes());
 		byte[] binary = s.sign();
@@ -68,11 +84,11 @@ public class EncodingXMLTest {
 
 	@Test
 	public void testDSA2048() throws Exception {
-		KeyPairGenerator gen = KeyPairGenerator.getInstance("DSA", BouncyCastleProvider.PROVIDER_NAME);
+		KeyPairGenerator gen = KeyPairGenerator.getInstance("DSA");
 		gen.initialize(2048); // works with 4096 too but it takes lot of time
 		KeyPair pair = gen.generateKeyPair();
 
-		Signature s = Signature.getInstance("SHA256withDSA", BouncyCastleProvider.PROVIDER_NAME);
+		Signature s = Signature.getInstance("SHA256withDSA");
 		s.initSign(pair.getPrivate());
 		s.update(HELLO_WORLD.getBytes());
 		byte[] signatureValue = s.sign();
@@ -81,10 +97,11 @@ public class EncodingXMLTest {
 
 	@Test
 	public void testECDSA() throws Exception {
-		KeyPairGenerator gen = KeyPairGenerator.getInstance("ECDSA", BouncyCastleProvider.PROVIDER_NAME);
+		Security.addProvider(new BouncyCastleProvider());
+		KeyPairGenerator gen = KeyPairGenerator.getInstance("ECDSA");
 		KeyPair pair = gen.generateKeyPair();
 
-		Signature s = Signature.getInstance("SHA256withECDSA", BouncyCastleProvider.PROVIDER_NAME);
+		Signature s = Signature.getInstance("SHA256withECDSA");
 		s.initSign(pair.getPrivate());
 		s.update(HELLO_WORLD.getBytes());
 		byte[] signatureValue = s.sign();
@@ -94,7 +111,7 @@ public class EncodingXMLTest {
 
 		byte[] asn1xmlsec = SignatureECDSA.convertXMLDSIGtoASN1(convertToXmlDSig);
 
-		Signature s2 = Signature.getInstance("SHA256withECDSA", BouncyCastleProvider.PROVIDER_NAME);
+		Signature s2 = Signature.getInstance("SHA256withECDSA");
 		s2.initVerify(pair.getPublic());
 		s2.update(HELLO_WORLD.getBytes());
 		assertTrue(s2.verify(asn1xmlsec));
@@ -103,11 +120,11 @@ public class EncodingXMLTest {
 	@Test
 	public void testECDSA192() throws Exception {
 		Security.addProvider(new BouncyCastleProvider());
-		KeyPairGenerator gen = KeyPairGenerator.getInstance("ECDSA", BouncyCastleProvider.PROVIDER_NAME);
+		KeyPairGenerator gen = KeyPairGenerator.getInstance("ECDSA");
 		gen.initialize(192);
 		KeyPair pair = gen.generateKeyPair();
 
-		Signature s = Signature.getInstance("SHA256withECDSA", BouncyCastleProvider.PROVIDER_NAME);
+		Signature s = Signature.getInstance("SHA256withECDSA");
 		s.initSign(pair.getPrivate());
 		s.update(HELLO_WORLD.getBytes());
 		byte[] signatureValue = s.sign();
@@ -117,7 +134,7 @@ public class EncodingXMLTest {
 
 		byte[] asn1xmlsec = SignatureECDSA.convertXMLDSIGtoASN1(convertToXmlDSig);
 
-		Signature s2 = Signature.getInstance("SHA256withECDSA", BouncyCastleProvider.PROVIDER_NAME);
+		Signature s2 = Signature.getInstance("SHA256withECDSA");
 		s2.initVerify(pair.getPublic());
 		s2.update(HELLO_WORLD.getBytes());
 		assertTrue(s2.verify(asn1xmlsec));
@@ -139,6 +156,12 @@ public class EncodingXMLTest {
 				"0d2fc9f18d816e9054af943c392dd46f09da71521de9bd98d765e170f12eb086d3d0f9754105001ed2e703d7290ac967642bc70bdd7a96b5c2b8e3d4b503b80e");
 		assertCvcSignatureValid(
 				"065a15bd4fec67a2a302d9d3ec679cb8f298f9d6a1d855d3dbf39b3f2fa7ea461e437d9542c4a9527afe5e78c1412937f0dbb05a78380cfb2e1bf6eff944581a");
+		assertCvcSignatureValid(
+				"f322898717aada9b027855848fa6ec5c4bf84d67a70f0ecbafea9dc90fc1d4f0901325766b199bdcfce1f99a54f0b72e71d740b355fff84a5873fd36c439236e");
+		assertCvcSignatureValid(
+				"B003267151210F7D8D1A747EEC73A0185CC0E848BF885A9DDE061AB5FB19FB3B6249F8B7B84432738EE80DDAB9654DEA5C4DAB2EC34A5EC8DB17E3DFBF577521");
+		assertCvcSignatureValid(
+				"C511529B789F64466FE1D524AF9279BEED2F12429798FE0B920F9784A6EBB6400081949A7EE84803E823263CD528F5CE503593F00010191D382B092338AF2E96");
 	}
 
 	private void assertCvcSignatureValid(String cvcSignatureInHex) {

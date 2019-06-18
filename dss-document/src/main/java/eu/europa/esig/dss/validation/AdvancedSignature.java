@@ -1,19 +1,19 @@
 /**
  * DSS - Digital Signature Services
  * Copyright (C) 2015 European Commission, provided under the CEF programme
- *
+ * 
  * This file is part of the "DSS - Digital Signature Services" project.
- *
+ * 
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- *
+ * 
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
@@ -28,13 +28,15 @@ import java.util.Set;
 import eu.europa.esig.dss.DSSDocument;
 import eu.europa.esig.dss.DigestAlgorithm;
 import eu.europa.esig.dss.EncryptionAlgorithm;
+import eu.europa.esig.dss.MaskGenerationFunction;
+import eu.europa.esig.dss.SignatureAlgorithm;
 import eu.europa.esig.dss.SignatureForm;
 import eu.europa.esig.dss.SignatureLevel;
 import eu.europa.esig.dss.x509.CertificateToken;
 import eu.europa.esig.dss.x509.SignatureCertificateSource;
 import eu.europa.esig.dss.x509.SignaturePolicy;
-import eu.europa.esig.dss.x509.crl.OfflineCRLSource;
-import eu.europa.esig.dss.x509.ocsp.OfflineOCSPSource;
+import eu.europa.esig.dss.x509.revocation.crl.OfflineCRLSource;
+import eu.europa.esig.dss.x509.revocation.ocsp.OfflineOCSPSource;
 
 /**
  * Provides an abstraction for an Advanced Electronic Signature. This ease the validation process. Every signature
@@ -89,19 +91,31 @@ public interface AdvancedSignature extends Serializable {
 
 	/**
 	 * Retrieves the signature algorithm (or cipher) used for generating the signature.
-	 * XAdES: http://www.w3.org/TR/2013/NOTE-xmlsec-algorithms-20130411/
+	 *
+	 * @return {@code SignatureAlgorithm}
+	 */
+	SignatureAlgorithm getSignatureAlgorithm();
+
+	/**
+	 * Retrieves the encryption algorithm used for generating the signature.
 	 *
 	 * @return {@code EncryptionAlgorithm}
 	 */
 	EncryptionAlgorithm getEncryptionAlgorithm();
 
 	/**
-	 * Retrieves the signature algorithm (or cipher) used for generating the signature.
-	 * XAdES: http://www.w3.org/TR/2013/NOTE-xmlsec-algorithms-20130411/
+	 * Retrieves the digest algorithm used for generating the signature.
 	 *
 	 * @return {@code DigestAlgorithm}
 	 */
 	DigestAlgorithm getDigestAlgorithm();
+
+	/**
+	 * Retrieves the mask generation function used for generating the signature.
+	 *
+	 * @return {@code MaskGenerationFunction}
+	 */
+	MaskGenerationFunction getMaskGenerationFunction();
 
 	/**
 	 * Returns the signing time included within the signature.
@@ -164,12 +178,9 @@ public interface AdvancedSignature extends Serializable {
 
 	/**
 	 * Verifies the signature integrity; checks if the signed content has not been tampered with. In the case of a
-	 * non-AdES signature no including the signing certificate then the
-	 * latter must be provided by calling {@code setProvidedSigningCertificateToken} In the case of a detached signature
-	 * the signed content must be provided by calling {@code
-	 * setProvidedSigningCertificateToken}
-	 *
-	 * @return SignatureCryptographicVerification with all the information collected during the validation process.
+	 * non-AdES signature no including the signing certificate then the latter must be provided by calling
+	 * {@code setProvidedSigningCertificateToken} In the case of a detached signature the signed content must be
+	 * provided by calling {@code setProvidedSigningCertificateToken}
 	 */
 	void checkSignatureIntegrity();
 
@@ -331,6 +342,14 @@ public interface AdvancedSignature extends Serializable {
 	byte[] getArchiveTimestampData(final TimestampToken timestampToken, String canonicalizationMethod);
 
 	/**
+	 * This method allows to add an external timestamp. The given timestamp must be checked before.
+	 * 
+	 * @param timestamp
+	 *            the timestamp token
+	 */
+	void addExternalTimestamp(TimestampToken timestamp);
+
+	/**
 	 * Returns a list of counter signatures applied to this signature
 	 *
 	 * @return a {@code List} of {@code AdvancedSignatures} representing the counter signatures
@@ -410,5 +429,13 @@ public interface AdvancedSignature extends Serializable {
 	void findSignatureScope(SignatureScopeFinder signatureScopeFinder);
 
 	List<SignatureScope> getSignatureScopes();
+
+	/**
+	 * Returns individual validation foreach reference (XAdES) or for the
+	 * message-imprint (CAdES)
+	 * 
+	 * @return a list with one or more {@code ReferenceValidation}
+	 */
+	List<ReferenceValidation> getReferenceValidations();
 
 }

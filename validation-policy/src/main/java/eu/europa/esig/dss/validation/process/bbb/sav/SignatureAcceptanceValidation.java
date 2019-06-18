@@ -1,3 +1,23 @@
+/**
+ * DSS - Digital Signature Services
+ * Copyright (C) 2015 European Commission, provided under the CEF programme
+ * 
+ * This file is part of the "DSS - Digital Signature Services" project.
+ * 
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ */
 package eu.europa.esig.dss.validation.process.bbb.sav;
 
 import java.util.Date;
@@ -32,11 +52,13 @@ import eu.europa.esig.jaxb.policy.ValueConstraint;
  */
 public class SignatureAcceptanceValidation extends AbstractAcceptanceValidation<SignatureWrapper> {
 
+	private final DiagnosticData diagnosticData;
 	private final Context context;
 
 	public SignatureAcceptanceValidation(DiagnosticData diagnosticData, Date currentTime, SignatureWrapper signature, Context context,
 			ValidationPolicy validationPolicy) {
-		super(diagnosticData, signature, currentTime, validationPolicy);
+		super(signature, currentTime, validationPolicy);
+		this.diagnosticData = diagnosticData;
 		this.context = context;
 	}
 
@@ -140,6 +162,11 @@ public class SignatureAcceptanceValidation extends AbstractAcceptanceValidation<
 	private ChainItem<XmlSAV> signatureCryptographic() {
 		CryptographicConstraint constraint = validationPolicy.getSignatureCryptographicConstraint(context);
 		return new CryptographicCheck<XmlSAV>(result, token, currentTime, constraint);
+	}
+
+	@Override
+	protected void addAdditionalInfo() {
+		result.setValidationTime(currentTime);
 	}
 
 }

@@ -1,3 +1,23 @@
+/**
+ * DSS - Digital Signature Services
+ * Copyright (C) 2015 European Commission, provided under the CEF programme
+ * 
+ * This file is part of the "DSS - Digital Signature Services" project.
+ * 
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ */
 package eu.europa.esig.dss.validation.process.vpfswatsp.checks.psv;
 
 import java.util.Date;
@@ -13,6 +33,7 @@ import eu.europa.esig.dss.validation.policy.rules.Indication;
 import eu.europa.esig.dss.validation.policy.rules.SubIndication;
 import eu.europa.esig.dss.validation.process.Chain;
 import eu.europa.esig.dss.validation.process.ChainItem;
+import eu.europa.esig.dss.validation.process.bbb.sav.checks.CryptographicCheck;
 import eu.europa.esig.dss.validation.process.vpfswatsp.POEExtraction;
 import eu.europa.esig.dss.validation.process.vpfswatsp.checks.pcv.PastCertificateValidation;
 import eu.europa.esig.dss.validation.process.vpfswatsp.checks.psv.checks.BestSignatureTimeAfterCertificateIssuanceAndBeforeCertificateExpirationCheck;
@@ -23,6 +44,7 @@ import eu.europa.esig.dss.validation.process.vpfswatsp.checks.psv.checks.PastCer
 import eu.europa.esig.dss.validation.reports.wrapper.CertificateWrapper;
 import eu.europa.esig.dss.validation.reports.wrapper.DiagnosticData;
 import eu.europa.esig.dss.validation.reports.wrapper.TokenProxy;
+import eu.europa.esig.jaxb.policy.CryptographicConstraint;
 
 public class PastSignatureValidation extends Chain<XmlPSV> {
 
@@ -75,6 +97,8 @@ public class PastSignatureValidation extends Chain<XmlPSV> {
 		 */
 		if (controlTime != null && poe.isPOEExists(token.getId(), controlTime)) {
 
+			result.setControlTime(controlTime);
+
 			/*
 			 * If current time indication/sub-indication is INDETERMINATE/REVOKED_NO_POE or INDETERMINATE/
 			 * REVOKED_CA_NO_POE, the building block shall return PASSED.
@@ -116,7 +140,9 @@ public class PastSignatureValidation extends Chain<XmlPSV> {
 		 * considered secure, the building block shall return the status indication PASSED.
 		 */
 		if (Indication.INDETERMINATE.equals(currentTimeIndication) && SubIndication.CRYPTO_CONSTRAINTS_FAILURE_NO_POE.equals(currentTimeSubIndication)) {
-			// TODO
+			Date bestSignatureTime = poe.getLowestPOE(token.getId(), controlTime);
+			item = item.setNextItem(poeUsedAlgorithmInSecureTimeExistsForEachAlgorithmConcernedByFailure(bestSignatureTime));
+			return;
 		}
 
 		/*
@@ -147,6 +173,11 @@ public class PastSignatureValidation extends Chain<XmlPSV> {
 			CertificateWrapper signingCertificate) {
 		return new BestSignatureTimeAfterCertificateIssuanceAndBeforeCertificateExpirationCheck(result, bestSignatureTime, signingCertificate,
 				getFailLevelConstraint());
+	}
+	
+	private ChainItem<XmlPSV> poeUsedAlgorithmInSecureTimeExistsForEachAlgorithmConcernedByFailure(Date bestSignatureTime) {
+		CryptographicConstraint cryptographicConstraint = policy.getSignatureCryptographicConstraint(context);
+		return new CryptographicCheck<XmlPSV>(result, token, bestSignatureTime, cryptographicConstraint);
 	}
 
 }

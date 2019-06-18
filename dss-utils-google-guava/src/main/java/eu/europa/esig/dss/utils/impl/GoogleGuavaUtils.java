@@ -1,14 +1,37 @@
+/**
+ * DSS - Digital Signature Services
+ * Copyright (C) 2015 European Commission, provided under the CEF programme
+ * 
+ * This file is part of the "DSS - Digital Signature Services" project.
+ * 
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ */
 package eu.europa.esig.dss.utils.impl;
 
 import java.io.ByteArrayInputStream;
 import java.io.Closeable;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Objects;
 
+import com.google.common.base.Ascii;
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
@@ -187,6 +210,11 @@ public class GoogleGuavaUtils implements IUtils {
 	}
 
 	@Override
+	public byte[] fromHex(String hex) {
+		return BaseEncoding.base16().lowerCase().decode(Ascii.toLowerCase(hex));
+	}
+
+	@Override
 	public String toBase64(byte[] bytes) {
 		return BaseEncoding.base64().encode(bytes);
 	}
@@ -219,16 +247,20 @@ public class GoogleGuavaUtils implements IUtils {
 	public void write(byte[] content, OutputStream os) throws IOException {
 		ByteStreams.copy(new ByteArrayInputStream(content), os);
 	}
+	
+	@Override
+	public long getInputStreamSize(InputStream is) throws IOException {
+		return ByteStreams.exhaust(is);
+	}
 
 	@Override
 	public void cleanDirectory(File directory) throws IOException {
-		if (directory == null || !directory.exists()) {
-			throw new IllegalArgumentException("Not exists");
+		Objects.requireNonNull(directory, "Directory cannot be null");
+		if (!directory.exists() || !directory.isDirectory()) {
+			throw new FileNotFoundException("Directory '" + directory.getAbsolutePath() + "' not found");
 		} else if (directory.isDirectory()) {
 			File[] listFiles = directory.listFiles();
-			if (listFiles == null) {
-				return;
-			} else {
+			if (listFiles != null) {
 				for (File file : listFiles) {
 					if (file.isDirectory()) {
 						cleanDirectory(file);

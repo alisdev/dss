@@ -1,6 +1,28 @@
+/**
+ * DSS - Digital Signature Services
+ * Copyright (C) 2015 European Commission, provided under the CEF programme
+ * 
+ * This file is part of the "DSS - Digital Signature Services" project.
+ * 
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ */
 package eu.europa.esig.dss.validation.process.bbb.isc;
 
 import eu.europa.esig.dss.SignatureForm;
+import eu.europa.esig.dss.jaxb.detailedreport.XmlCertificateChain;
+import eu.europa.esig.dss.jaxb.detailedreport.XmlChainItem;
 import eu.europa.esig.dss.jaxb.detailedreport.XmlISC;
 import eu.europa.esig.dss.validation.policy.Context;
 import eu.europa.esig.dss.validation.policy.ValidationPolicy;
@@ -11,7 +33,6 @@ import eu.europa.esig.dss.validation.process.bbb.isc.checks.DigestValuePresentCh
 import eu.europa.esig.dss.validation.process.bbb.isc.checks.IssuerSerialMatchCheck;
 import eu.europa.esig.dss.validation.process.bbb.isc.checks.SigningCertificateAttributePresentCheck;
 import eu.europa.esig.dss.validation.process.bbb.isc.checks.SigningCertificateRecognitionCheck;
-import eu.europa.esig.dss.validation.process.bbb.isc.checks.SigningCertificateSignedCheck;
 import eu.europa.esig.dss.validation.reports.wrapper.DiagnosticData;
 import eu.europa.esig.dss.validation.reports.wrapper.SignatureWrapper;
 import eu.europa.esig.dss.validation.reports.wrapper.TokenProxy;
@@ -52,7 +73,6 @@ public class IdentificationOfTheSigningCertificate extends Chain<XmlISC> {
 		ChainItem<XmlISC> item = firstItem = signingCertificateRecognition();
 
 		if (Context.SIGNATURE.equals(context) || Context.COUNTER_SIGNATURE.equals(context)) {
-
 			/*
 			 * 1) If the signature format used contains a way to directly identify the reference to the signers'
 			 * certificate in the attribute, the building block shall check that the digest of the certificate
@@ -67,7 +87,6 @@ public class IdentificationOfTheSigningCertificate extends Chain<XmlISC> {
 				return;
 			}
 
-			item = item.setNextItem(signingCertificateSigned());
 			item = item.setNextItem(signingCertificateAttributePresent());
 
 			/*
@@ -91,14 +110,25 @@ public class IdentificationOfTheSigningCertificate extends Chain<XmlISC> {
 		}
 	}
 
+	@Override
+	protected void addAdditionalInfo() {
+		super.addAdditionalInfo();
+
+		if (token.getCertificateChain() != null) {
+			XmlCertificateChain certificateChain = new XmlCertificateChain();
+			for (eu.europa.esig.dss.jaxb.diagnostic.XmlChainItem diagnosticChainItem : token.getCertificateChain()) {
+				XmlChainItem chainItem = new XmlChainItem();
+				chainItem.setId(diagnosticChainItem.getId());
+				chainItem.setSource(diagnosticChainItem.getSource());
+				certificateChain.getChainItem().add(chainItem);
+			}
+			result.setCertificateChain(certificateChain);
+		}
+	}
+
 	private ChainItem<XmlISC> signingCertificateRecognition() {
 		LevelConstraint constraint = validationPolicy.getSigningCertificateRecognitionConstraint(context);
 		return new SigningCertificateRecognitionCheck(result, token, diagnosticData, constraint);
-	}
-
-	private ChainItem<XmlISC> signingCertificateSigned() {
-		LevelConstraint constraint = validationPolicy.getSigningCertificateSignedConstraint(context);
-		return new SigningCertificateSignedCheck(result, token, constraint);
 	}
 
 	private ChainItem<XmlISC> signingCertificateAttributePresent() {

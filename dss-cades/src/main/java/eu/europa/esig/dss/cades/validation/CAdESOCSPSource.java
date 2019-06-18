@@ -1,19 +1,19 @@
 /**
  * DSS - Digital Signature Services
  * Copyright (C) 2015 European Commission, provided under the CEF programme
- *
+ * 
  * This file is part of the "DSS - Digital Signature Services" project.
- *
+ * 
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- *
+ * 
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
@@ -36,7 +36,6 @@ import org.bouncycastle.asn1.ocsp.OCSPObjectIdentifiers;
 import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers;
 import org.bouncycastle.cert.ocsp.BasicOCSPResp;
 import org.bouncycastle.cert.ocsp.OCSPResp;
-import org.bouncycastle.cms.CMSException;
 import org.bouncycastle.cms.CMSSignedData;
 import org.bouncycastle.cms.SignerInformation;
 import org.bouncycastle.util.Store;
@@ -44,7 +43,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import eu.europa.esig.dss.cades.CMSUtils;
-import eu.europa.esig.dss.x509.ocsp.OfflineOCSPSource;
+import eu.europa.esig.dss.x509.revocation.ocsp.OfflineOCSPSource;
 
 /**
  * OCSPSource that retrieves information from a CAdESSignature.
@@ -53,7 +52,7 @@ import eu.europa.esig.dss.x509.ocsp.OfflineOCSPSource;
  */
 public class CAdESOCSPSource extends OfflineOCSPSource {
 
-	private static final Logger logger = LoggerFactory.getLogger(CAdESOCSPSource.class);
+	private static final Logger LOG = LoggerFactory.getLogger(CAdESOCSPSource.class);
 
 	private CMSSignedData cmsSignedData;
 	private SignerInformation signerInformation;
@@ -62,10 +61,11 @@ public class CAdESOCSPSource extends OfflineOCSPSource {
 	 * The default constructor for CAdESOCSPSource.
 	 *
 	 * @param cms
-	 * @throws CMSException
+	 *            the CMSSignedData
+	 * @param signerInformation
+	 *            the SignerInformation
 	 */
 	public CAdESOCSPSource(final CMSSignedData cms, final SignerInformation signerInformation) {
-
 		this.cmsSignedData = cms;
 		this.signerInformation = signerInformation;
 	}
@@ -150,11 +150,12 @@ public class CAdESOCSPSource extends OfflineOCSPSource {
 					basicOCSPResp = CMSUtils.getBasicOcspResp(otherRevocationInfoMatch);
 				} else {
 					final OCSPResp ocspResp = CMSUtils.getOcspResp(otherRevocationInfoMatch);
-					basicOCSPResp = CMSUtils.getBasicOCSPResp(ocspResp);
+					basicOCSPResp = CMSUtils.getBasicOcspResp(ocspResp);
 				}
 				addBasicOcspResp(basicOCSPResps, basicOCSPResp);
 			} else {
-				logger.warn("Unsupported object type for id_ri_ocsp_response (SHALL be DER encoding) : " + object.getClass().getSimpleName());
+				LOG.warn("Unsupported object type for id_ri_ocsp_response (SHALL be DER encoding) : {}",
+						object.getClass().getSimpleName());
 			}
 		}
 	}
@@ -168,7 +169,8 @@ public class CAdESOCSPSource extends OfflineOCSPSource {
 				final BasicOCSPResp basicOCSPResp = CMSUtils.getBasicOcspResp(otherRevocationInfoMatch);
 				addBasicOcspResp(basicOCSPResps, basicOCSPResp);
 			} else {
-				logger.warn("Unsupported object type for id_pkix_ocsp_basic (SHALL be DER encoding) : " + object.getClass().getSimpleName());
+				LOG.warn("Unsupported object type for id_pkix_ocsp_basic (SHALL be DER encoding) : {}",
+						object.getClass().getSimpleName());
 			}
 		}
 	}

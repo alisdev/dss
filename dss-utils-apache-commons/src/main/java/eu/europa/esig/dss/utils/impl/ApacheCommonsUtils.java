@@ -1,12 +1,34 @@
+/**
+ * DSS - Digital Signature Services
+ * Copyright (C) 2015 European Commission, provided under the CEF programme
+ * 
+ * This file is part of the "DSS - Digital Signature Services" project.
+ * 
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ */
 package eu.europa.esig.dss.utils.impl;
 
 import java.io.Closeable;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Collection;
 
+import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.collections4.CollectionUtils;
@@ -140,6 +162,15 @@ public class ApacheCommonsUtils implements IUtils {
 	}
 
 	@Override
+	public byte[] fromHex(String hex) {
+		try {
+			return Hex.decodeHex(hex.toCharArray());
+		} catch (DecoderException e) {
+			throw new IllegalArgumentException("Unable to extract binary from Hex", e);
+		}
+	}
+
+	@Override
 	public String toBase64(byte[] bytes) {
 		return Base64.encodeBase64String(bytes);
 	}
@@ -168,10 +199,26 @@ public class ApacheCommonsUtils implements IUtils {
 	public void write(byte[] content, OutputStream os) throws IOException {
 		IOUtils.write(content, os);
 	}
+	
+	@Override
+	public long getInputStreamSize(InputStream is) throws IOException {
+		long byteCounter = 0;
+		int nRead;
+	    byte[] data = new byte[8192];
+	    while ((nRead = IOUtils.read(is, data)) > 0) {
+	    	byteCounter += nRead;
+	    }
+		return byteCounter;
+	}
 
 	@Override
 	public void cleanDirectory(File directory) throws IOException {
-		FileUtils.cleanDirectory(directory);
+		try {
+			FileUtils.cleanDirectory(directory);
+		} catch (IllegalArgumentException e) {
+			// Apache throws IllegalArgumentException
+			throw new FileNotFoundException(e.getMessage());
+		}
 	}
 
 	@Override

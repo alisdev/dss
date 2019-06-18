@@ -1,19 +1,19 @@
 /**
  * DSS - Digital Signature Services
  * Copyright (C) 2015 European Commission, provided under the CEF programme
- *
+ * 
  * This file is part of the "DSS - Digital Signature Services" project.
- *
+ * 
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- *
+ * 
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
@@ -30,21 +30,22 @@ import org.apache.xml.security.c14n.Canonicalizer;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 import org.w3c.dom.Text;
 
 import eu.europa.esig.dss.DSSDocument;
 import eu.europa.esig.dss.DSSException;
 import eu.europa.esig.dss.DSSUtils;
+import eu.europa.esig.dss.DigestAlgorithm;
 import eu.europa.esig.dss.DomUtils;
 import eu.europa.esig.dss.EncryptionAlgorithm;
-import eu.europa.esig.dss.InMemoryDocument;
-import eu.europa.esig.dss.MimeType;
 import eu.europa.esig.dss.utils.Utils;
 import eu.europa.esig.dss.validation.CertificateVerifier;
-import eu.europa.esig.dss.xades.DSSReference;
-import eu.europa.esig.dss.xades.DSSTransform;
-import eu.europa.esig.dss.xades.DSSXMLUtils;
 import eu.europa.esig.dss.xades.XAdESSignatureParameters;
+import eu.europa.esig.dss.xades.reference.Base64Transform;
+import eu.europa.esig.dss.xades.reference.CanonicalizationTransform;
+import eu.europa.esig.dss.xades.reference.DSSReference;
+import eu.europa.esig.dss.xades.reference.DSSTransform;
 
 /**
  * This class handles the specifics of the enveloping XML signature
@@ -72,19 +73,31 @@ class EnvelopingSignatureBuilder extends XAdESSignatureBuilder {
 	protected DSSReference createReference(DSSDocument document, int referenceIndex) {
 		// <ds:Reference Id="signed-data-ref" Type="http://www.w3.org/2000/09/xmldsig#Object"
 		// URI="#signed-data-idfc5ff27ee49763d9ba88ba5bbc49f732">
+		final String suffix = deterministicId + "-" + referenceIndex;
 		final DSSReference reference = new DSSReference();
-		reference.setId("r-id-" + referenceIndex);
-		reference.setType(HTTP_WWW_W3_ORG_2000_09_XMLDSIG_OBJECT);
-		reference.setUri("#o-id-" + referenceIndex);
+		reference.setId(REFERENCE_ID_SUFFIX + suffix);
 		reference.setContents(document);
-		reference.setDigestMethodAlgorithm(params.getDigestAlgorithm());
-		if (reference.getContents().getMimeType() == MimeType.XML && params.isEmbedXML()) {
-			DSSTransform xmlTransform = new DSSTransform();
-			xmlTransform.setAlgorithm(Canonicalizer.ALGO_ID_C14N_OMIT_COMMENTS);
+		DigestAlgorithm digestAlgorithm = getReferenceDigestAlgorithmOrDefault(params);
+		reference.setDigestMethodAlgorithm(digestAlgorithm);
+
+		if (params.isManifestSignature()) {
+			reference.setType(HTTP_WWW_W3_ORG_2000_09_XMLDSIG_MANIFEST);
+			Document manifestDoc = DomUtils.buildDOM(document);
+			Element manifestElement = manifestDoc.getDocumentElement();
+			reference.setUri("#" + manifestElement.getAttribute(ID));
+			DSSTransform xmlTransform = new CanonicalizationTransform(Canonicalizer.ALGO_ID_C14N11_OMIT_COMMENTS);
+			reference.setTransforms(Arrays.asList(xmlTransform));
+		} else if (params.isEmbedXML()) {
+			reference.setType(HTTP_WWW_W3_ORG_2000_09_XMLDSIG_OBJECT);
+			reference.setUri("#" + OBJECT_ID_SUFFIX + suffix);
+
+			DSSTransform xmlTransform = new CanonicalizationTransform(Canonicalizer.ALGO_ID_C14N11_OMIT_COMMENTS);
 			reference.setTransforms(Arrays.asList(xmlTransform));
 		} else {
-			DSSTransform base64Transform = new DSSTransform();
-			base64Transform.setAlgorithm(CanonicalizationMethod.BASE64);
+			reference.setType(HTTP_WWW_W3_ORG_2000_09_XMLDSIG_OBJECT);
+			reference.setUri("#" + OBJECT_ID_SUFFIX + suffix);
+
+			DSSTransform base64Transform = new Base64Transform();
 			reference.setTransforms(Arrays.asList(base64Transform));
 		}
 		return reference;
@@ -116,35 +129,43 @@ class EnvelopingSignatureBuilder extends XAdESSignatureBuilder {
 
 		final List<DSSReference> references = params.getReferences();
 		for (final DSSReference reference : references) {
-
-			final String id = reference.getUri().substring(1);
 			// <ds:Object>
-			DSSDocument tbsDoc = reference.getContents();
-			if (tbsDoc.getMimeType() == MimeType.XML && params.isEmbedXML()) {
-				try {
-					Document doc = DomUtils.buildDOM(reference.getContents().openStream());
-					Element root = doc.getDocumentElement();
-					Node adopted = documentDom.adoptNode(root);
+			if (params.isManifestSignature()) {
 
-					final Element dom = documentDom.createElementNS(XMLSignature.XMLNS, DS_OBJECT);
-					dom.appendChild(adopted);
-					signatureDom.appendChild(dom);
-					dom.setAttribute(ID, id);
+				Document doc = DomUtils.buildDOM(reference.getContents());
+				Element root = doc.getDocumentElement();
+				NodeList referencesNodes = root.getChildNodes();
+				String idAttribute = root.getAttribute(ID);
 
-				} catch (Exception e) {
-					throw new DSSException(e);
+				// rebuild manifest element to avoid namespace duplication
+				final Element manifestDom = documentDom.createElementNS(XMLSignature.XMLNS, DS_MANIFEST);
+				manifestDom.setAttribute(ID, idAttribute);
+				for (int i = 0; i < referencesNodes.getLength(); i++) {
+					Node copyNode = documentDom.importNode(referencesNodes.item(i), true);
+					manifestDom.appendChild(copyNode);
 				}
+
+				final Element dom = documentDom.createElementNS(XMLSignature.XMLNS, DS_OBJECT);
+				dom.appendChild(manifestDom);
+				signatureDom.appendChild(dom);
+			} else if (params.isEmbedXML()) {
+				Document doc = DomUtils.buildDOM(reference.getContents());
+				Element root = doc.getDocumentElement();
+				Node adopted = documentDom.adoptNode(root);
+
+				final Element dom = documentDom.createElementNS(XMLSignature.XMLNS, DS_OBJECT);
+				final String id = reference.getUri().substring(1);
+				dom.setAttribute(ID, id);
+				dom.appendChild(adopted);
+				signatureDom.appendChild(dom);
 			} else {
 				final String base64EncodedOriginalDocument = Utils.toBase64(DSSUtils.toByteArray(reference.getContents()));
 				final Element objectDom = DomUtils.addTextElement(documentDom, signatureDom, XMLSignature.XMLNS, DS_OBJECT, base64EncodedOriginalDocument);
+				final String id = reference.getUri().substring(1);
 				objectDom.setAttribute(ID, id);
 			}
 		}
-
-		byte[] documentBytes = DSSXMLUtils.serializeNode(documentDom);
-		final InMemoryDocument inMemoryDocument = new InMemoryDocument(documentBytes);
-		inMemoryDocument.setMimeType(MimeType.XML);
-		return inMemoryDocument;
+		return createXmlDocument();
 	}
 
 }

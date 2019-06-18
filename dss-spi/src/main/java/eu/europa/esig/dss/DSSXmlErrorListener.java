@@ -1,3 +1,23 @@
+/**
+ * DSS - Digital Signature Services
+ * Copyright (C) 2015 European Commission, provided under the CEF programme
+ * 
+ * This file is part of the "DSS - Digital Signature Services" project.
+ * 
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ */
 package eu.europa.esig.dss;
 
 import javax.xml.transform.ErrorListener;
@@ -8,23 +28,23 @@ import org.slf4j.LoggerFactory;
 
 public class DSSXmlErrorListener implements ErrorListener {
 
-	private static final Logger logger = LoggerFactory.getLogger(DSSXmlErrorListener.class);
+	private static final Logger LOG = LoggerFactory.getLogger(DSSXmlErrorListener.class);
 
 	@Override
 	public void warning(TransformerException e) throws TransformerException {
-		logger.warn(e.getMessage(), e);
+		LOG.warn(e.getMessage(), e);
 		throw e;
 	}
 
 	@Override
 	public void error(TransformerException e) throws TransformerException {
-		logger.error(e.getMessage(), e);
+		LOG.error(e.getMessage(), e);
 		throw e;
 	}
 
 	@Override
 	public void fatalError(TransformerException e) throws TransformerException {
-		logger.error(e.getMessage(), e);
+		LOG.error(e.getMessage(), e);
 		throw e;
 	}
 

@@ -1,3 +1,23 @@
+/**
+ * DSS - Digital Signature Services
+ * Copyright (C) 2015 European Commission, provided under the CEF programme
+ * 
+ * This file is part of the "DSS - Digital Signature Services" project.
+ * 
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ */
 package eu.europa.esig.dss.cades.extension;
 
 import static org.junit.Assert.assertFalse;
@@ -12,13 +32,10 @@ import org.junit.Test;
 import eu.europa.esig.dss.DSSDocument;
 import eu.europa.esig.dss.DSSException;
 import eu.europa.esig.dss.FileDocument;
-import eu.europa.esig.dss.SignatureAlgorithm;
 import eu.europa.esig.dss.SignatureLevel;
 import eu.europa.esig.dss.cades.CAdESSignatureParameters;
 import eu.europa.esig.dss.cades.signature.CAdESService;
-import eu.europa.esig.dss.test.gen.CertificateService;
-import eu.europa.esig.dss.test.mock.MockTSPSource;
-import eu.europa.esig.dss.validation.CommonCertificateVerifier;
+import eu.europa.esig.dss.signature.PKIFactoryAccess;
 import eu.europa.esig.dss.validation.SignedDocumentValidator;
 import eu.europa.esig.dss.validation.reports.Reports;
 import eu.europa.esig.dss.validation.reports.wrapper.DiagnosticData;
@@ -26,7 +43,7 @@ import eu.europa.esig.dss.validation.reports.wrapper.DiagnosticData;
 /**
  * Unit test to fix issue https://esig-dss.atlassian.net/browse/DSS-646
  */
-public class ExtendToCAdESLtaTest {
+public class ExtendToCAdESLtaTest extends PKIFactoryAccess {
 
 	private static final String SIGNED_DOC_PATH = "src/test/resources/validation/dss-646/CAdES_A_DETACHED.csig";
 	private static final String DETACHED_DOC_PATH = "src/test/resources/validation/dss-646/document.pdf";
@@ -34,7 +51,7 @@ public class ExtendToCAdESLtaTest {
 	@Test
 	public void testValidation() {
 		SignedDocumentValidator validator = SignedDocumentValidator.fromDocument(new FileDocument(SIGNED_DOC_PATH));
-		validator.setCertificateVerifier(new CommonCertificateVerifier());
+		validator.setCertificateVerifier(getCompleteCertificateVerifier());
 		List<DSSDocument> detachedContents = new ArrayList<DSSDocument>();
 		detachedContents.add(new FileDocument(DETACHED_DOC_PATH));
 		validator.setDetachedContents(detachedContents);
@@ -51,10 +68,8 @@ public class ExtendToCAdESLtaTest {
 
 	@Test(expected = DSSException.class)
 	public void testExtend() throws Exception {
-		CertificateService certificateService = new CertificateService();
-
-		CAdESService service = new CAdESService(new CommonCertificateVerifier());
-		service.setTspSource(new MockTSPSource(certificateService.generateTspCertificate(SignatureAlgorithm.RSA_SHA256)));
+		CAdESService service = new CAdESService(getCompleteCertificateVerifier());
+		service.setTspSource(getGoodTsa());
 
 		CAdESSignatureParameters parameters = new CAdESSignatureParameters();
 		parameters.setSignatureLevel(SignatureLevel.CAdES_BASELINE_LTA);
@@ -62,6 +77,12 @@ public class ExtendToCAdESLtaTest {
 		parameters.setDetachedContents(Arrays.asList(detachedContent));
 		DSSDocument extendDocument = service.extendDocument(new FileDocument(SIGNED_DOC_PATH), parameters);
 		assertNotNull(extendDocument);
+	}
+
+	@Override
+	protected String getSigningAlias() {
+		// not for signing
+		return null;
 	}
 
 }

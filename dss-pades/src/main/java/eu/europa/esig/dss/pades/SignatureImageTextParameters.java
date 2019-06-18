@@ -1,19 +1,19 @@
 /**
  * DSS - Digital Signature Services
  * Copyright (C) 2015 European Commission, provided under the CEF programme
- *
+ * 
  * This file is part of the "DSS - Digital Signature Services" project.
- *
+ * 
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- *
+ * 
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
@@ -21,7 +21,6 @@
 package eu.europa.esig.dss.pades;
 
 import java.awt.Color;
-import java.awt.Font;
 
 /**
  * This class allows to custom text generation in the PAdES visible signature
@@ -30,8 +29,9 @@ import java.awt.Font;
 public class SignatureImageTextParameters {
 
 	public static final Font DEFAULT_FONT = new Font("serif", Font.PLAIN, 8);
-	public static final Color DEFAUT_TEXT_COLOR = Color.BLACK;
 	public static final Color DEFAULT_BACKGROUND_COLOR = Color.WHITE;
+	public static final float DEFAULT_MARGIN = 5f;
+	public static final Color DEFAUT_TEXT_COLOR = Color.BLACK;
 
 	/**
 	 * Enum to define where to add the signer name on the image
@@ -63,16 +63,22 @@ public class SignatureImageTextParameters {
 	private String text;
 
 	/**
-	 * This variable defines the font to use when the signerNamePosition is not
-	 * NONE)
+	 * This variable defines the font to use
+	 * (default is PTSerifRegular)
 	 */
-	private Font font = DEFAULT_FONT;
+	private DSSFont dssFont = DSSFileFont.initializeDefault();
+	
+	/**
+	 * This variable defines a margin in pixels to bound text around
+	 * (default is 5)
+	 */
+	private float margin = DEFAULT_MARGIN;
 
 	/**
-	 * This variable defines the text color to use when the signerNamePosition
-	 * is not NONE (default is BLACK)
+	 * This variable defines the text color to use 
+     * (default is BLACK)
 	 */
-	private Color textColor = DEFAUT_TEXT_COLOR;
+	private Color textColor = DEFAULT_TEXT_COLOR;
 
 	/**
 	 * This variable defines the text color to use when the signerNamePosition
@@ -96,12 +102,20 @@ public class SignatureImageTextParameters {
         this.signerTextHorizontalAlignment = signerTextHorizontalAlignment;
     }
 
-	public Font getFont() {
-		return font;
+	public DSSFont getFont() {
+		return dssFont;
 	}
-
-	public void setFont(Font font) {
-		this.font = font;
+	
+	public void setFont(DSSFont dssFont) {
+		this.dssFont = dssFont;
+	}
+	
+	public float getMargin() {
+		return margin;
+	}
+	
+	public void setMargin(float margin) {
+		this.margin = margin;
 	}
 
 	public Color getTextColor() {
@@ -126,6 +140,10 @@ public class SignatureImageTextParameters {
 
 	public void setText(String text) {
 		this.text = text;
+	}
+	
+	public void setSize(int size) {
+		dssFont.setSize(size);
 	}
 
 }

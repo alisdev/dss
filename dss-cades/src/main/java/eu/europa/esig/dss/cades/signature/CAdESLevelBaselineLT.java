@@ -1,41 +1,34 @@
 /**
  * DSS - Digital Signature Services
  * Copyright (C) 2015 European Commission, provided under the CEF programme
- *
+ * 
  * This file is part of the "DSS - Digital Signature Services" project.
- *
+ * 
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- *
+ * 
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 package eu.europa.esig.dss.cades.signature;
 
-import java.security.cert.CRLException;
-import java.security.cert.X509CRL;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.bouncycastle.asn1.ASN1Encodable;
-import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.ASN1Primitive;
-import org.bouncycastle.asn1.DERBitString;
-import org.bouncycastle.asn1.DERSequence;
 import org.bouncycastle.asn1.cms.CMSObjectIdentifiers;
 import org.bouncycastle.asn1.ocsp.OCSPObjectIdentifiers;
-import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
-import org.bouncycastle.asn1.x509.CertificateList;
-import org.bouncycastle.asn1.x509.TBSCertList;
 import org.bouncycastle.cert.X509CRLHolder;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.ocsp.BasicOCSPResp;
@@ -53,8 +46,8 @@ import eu.europa.esig.dss.validation.CertificateVerifier;
 import eu.europa.esig.dss.validation.DefaultAdvancedSignature;
 import eu.europa.esig.dss.validation.ValidationContext;
 import eu.europa.esig.dss.x509.CertificateToken;
-import eu.europa.esig.dss.x509.crl.CRLToken;
-import eu.europa.esig.dss.x509.ocsp.OCSPToken;
+import eu.europa.esig.dss.x509.revocation.crl.CRLToken;
+import eu.europa.esig.dss.x509.revocation.ocsp.OCSPToken;
 import eu.europa.esig.dss.x509.tsp.TSPSource;
 
 /**
@@ -68,10 +61,10 @@ public class CAdESLevelBaselineLT extends CAdESSignatureExtension {
 	private final CertificateVerifier certificateVerifier;
 	private final CAdESLevelBaselineT cadesProfileT;
 
-	public CAdESLevelBaselineLT(TSPSource signatureTsa, CertificateVerifier certificateVerifier, boolean onlyLastSigner) {
-		super(signatureTsa, onlyLastSigner);
+	public CAdESLevelBaselineLT(TSPSource tspSource, CertificateVerifier certificateVerifier, boolean onlyLastSigner) {
+		super(tspSource, onlyLastSigner);
 		this.certificateVerifier = certificateVerifier;
-		cadesProfileT = new CAdESLevelBaselineT(signatureTsa, onlyLastSigner);
+		cadesProfileT = new CAdESLevelBaselineT(tspSource, onlyLastSigner);
 	}
 
 	@Override
@@ -79,7 +72,7 @@ public class CAdESLevelBaselineLT extends CAdESSignatureExtension {
 			throws DSSException {
 
 		// add a LT level or replace an existing LT level
-		CAdESSignature cadesSignature = new CAdESSignature(cmsSignedData, signerInformation);
+		CAdESSignature cadesSignature = new CAdESSignature(cmsSignedData, signerInformation, certificateVerifier.createValidationPool());
 		cadesSignature.setDetachedContents(parameters.getDetachedContents());
 		if (!cadesSignature.isDataForSignatureLevelPresent(SignatureLevel.CAdES_BASELINE_T)) {
 			signerInformation = cadesProfileT.extendCMSSignature(cmsSignedData, signerInformation, parameters);
@@ -90,7 +83,7 @@ public class CAdESLevelBaselineLT extends CAdESSignatureExtension {
 
 	@Override
 	protected CMSSignedData postExtendCMSSignedData(CMSSignedData cmsSignedData, SignerInformation signerInformation, CAdESSignatureParameters parameters) {
-		CAdESSignature cadesSignature = new CAdESSignature(cmsSignedData, signerInformation);
+		CAdESSignature cadesSignature = new CAdESSignature(cmsSignedData, signerInformation, certificateVerifier.createValidationPool());
 		cadesSignature.setDetachedContents(parameters.getDetachedContents());
 		final ValidationContext validationContext = cadesSignature.getSignatureValidationContext(certificateVerifier);
 
@@ -135,19 +128,10 @@ public class CAdESLevelBaselineLT extends CAdESSignatureExtension {
 	 * @return the a copy of x509crl as a X509CRLHolder
 	 */
 	private X509CRLHolder getX509CrlHolder(CRLToken crlToken) {
-		try {
-			final X509CRL x509crl = crlToken.getX509crl();
-			final TBSCertList tbsCertList = TBSCertList.getInstance(x509crl.getTBSCertList());
-			final AlgorithmIdentifier sigAlgOID = new AlgorithmIdentifier(new ASN1ObjectIdentifier(x509crl.getSigAlgOID()));
-			final byte[] signature = x509crl.getSignature();
-			final DERSequence seq = new DERSequence(new ASN1Encodable[] { tbsCertList, sigAlgOID, new DERBitString(signature) });
-			final CertificateList x509CRL = new CertificateList(seq);
-			// final CertificateList x509CRL = new
-			// CertificateList.getInstance((Object)seq);
-			final X509CRLHolder x509crlHolder = new X509CRLHolder(x509CRL);
-			return x509crlHolder;
-		} catch (CRLException e) {
-			throw new DSSException(e);
+		try (InputStream is = crlToken.getCRLStream()) {
+			return new X509CRLHolder(is);
+		} catch (IOException e) {
+			throw new DSSException("Unable to convert X509CRL to X509CRLHolder", e);
 		}
 	}
 

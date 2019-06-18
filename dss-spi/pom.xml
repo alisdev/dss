@@ -6,7 +6,7 @@
 	<parent>
 		<groupId>cz.alis.forked.eu.europa.ec.joinup.sd-dss</groupId>
 		<artifactId>sd-dss</artifactId>
-		<version>5.1-SNAPSHOT</version>
+		<version>5.5-SNAPSHOT</version>
 	</parent>
 
 	<artifactId>dss-spi</artifactId>
@@ -21,6 +21,10 @@
 		<dependency>
 			<groupId>cz.alis.forked.eu.europa.ec.joinup.sd-dss</groupId>
 			<artifactId>dss-utils</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>eu.europa.ec.joinup.sd-dss</groupId>
+			<artifactId>dss-crl-parser</artifactId>
 		</dependency>
 
 		<dependency>
@@ -41,6 +45,11 @@
 		<dependency>
 			<groupId>cz.alis.forked.eu.europa.ec.joinup.sd-dss</groupId>
 			<artifactId>dss-utils-apache-commons</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>eu.europa.ec.joinup.sd-dss</groupId>
+			<artifactId>dss-crl-parser-x509crl</artifactId>
 			<scope>test</scope>
 		</dependency>
 		<dependency>

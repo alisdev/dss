@@ -1,3 +1,23 @@
+/**
+ * DSS - Digital Signature Services
+ * Copyright (C) 2015 European Commission, provided under the CEF programme
+ * 
+ * This file is part of the "DSS - Digital Signature Services" project.
+ * 
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ */
 package eu.europa.esig.dss.utils;
 
 import java.io.Closeable;
@@ -19,6 +39,10 @@ public final class Utils {
 	static {
 		ServiceLoader<IUtils> loader = ServiceLoader.load(IUtils.class);
 		Iterator<IUtils> iterator = loader.iterator();
+		if (!iterator.hasNext()) {
+			throw new ExceptionInInitializerError(
+					"No implementation found for IUtils in classpath, please choose between dss-utils-apache-commons or dss-utils-google-guava");
+		}
 		impl = iterator.next();
 	}
 
@@ -120,6 +144,10 @@ public final class Utils {
 		return impl.toHex(bytes);
 	}
 
+	public static byte[] fromHex(String hex) {
+		return impl.fromHex(hex);
+	}
+
 	public static String toBase64(byte[] bytes) {
 		return impl.toBase64(bytes);
 	}
@@ -142,6 +170,10 @@ public final class Utils {
 
 	public static void write(byte[] content, OutputStream os) throws IOException {
 		impl.write(content, os);
+	}
+	
+	public static long getInputStreamSize(InputStream is) throws IOException {
+		return impl.getInputStreamSize(is);
 	}
 
 	public static void cleanDirectory(File directory) throws IOException {

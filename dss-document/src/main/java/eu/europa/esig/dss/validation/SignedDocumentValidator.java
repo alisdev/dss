@@ -1,19 +1,19 @@
 /**
  * DSS - Digital Signature Services
  * Copyright (C) 2015 European Commission, provided under the CEF programme
- *
+ * 
  * This file is part of the "DSS - Digital Signature Services" project.
- *
+ * 
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- *
+ * 
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Constructor;
 import java.net.URL;
+import java.security.Security;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -34,6 +35,7 @@ import org.slf4j.LoggerFactory;
 
 import eu.europa.esig.dss.DSSDocument;
 import eu.europa.esig.dss.DSSException;
+import eu.europa.esig.dss.DSSSecurityProvider;
 import eu.europa.esig.dss.DSSUtils;
 import eu.europa.esig.dss.jaxb.diagnostic.DiagnosticData;
 import eu.europa.esig.dss.utils.Utils;
@@ -47,8 +49,8 @@ import eu.europa.esig.dss.validation.reports.Reports;
 import eu.europa.esig.dss.x509.CertificatePool;
 import eu.europa.esig.dss.x509.CertificateSourceType;
 import eu.europa.esig.dss.x509.CertificateToken;
-import eu.europa.esig.dss.x509.crl.ListCRLSource;
-import eu.europa.esig.dss.x509.ocsp.ListOCSPSource;
+import eu.europa.esig.dss.x509.revocation.crl.ListCRLSource;
+import eu.europa.esig.dss.x509.revocation.ocsp.ListOCSPSource;
 import eu.europa.esig.jaxb.policy.ConstraintsParameters;
 
 /**
@@ -62,6 +64,10 @@ import eu.europa.esig.jaxb.policy.ConstraintsParameters;
 public abstract class SignedDocumentValidator implements DocumentValidator {
 
 	private static final Logger LOG = LoggerFactory.getLogger(SignedDocumentValidator.class);
+
+	static {
+		Security.addProvider(DSSSecurityProvider.getSecurityProvider());
+	}
 
 	/**
 	 * This variable can hold a specific {@code ProcessExecutor}
@@ -122,9 +128,9 @@ public abstract class SignedDocumentValidator implements DocumentValidator {
 			@SuppressWarnings("unchecked")
 			Class<SignedDocumentValidator> documentValidator = (Class<SignedDocumentValidator>) Class.forName(clazzToFind);
 			registredDocumentValidators.add(documentValidator);
-			LOG.info("Validator '" + documentValidator.getName() + "' is registred");
+			LOG.info("Validator '{}' is registred", documentValidator.getName());
 		} catch (ClassNotFoundException e) {
-			LOG.warn("Validator not found for signature type " + type);
+			LOG.warn("Validator not found for signature type : {}", type);
 		}
 	}
 
@@ -246,7 +252,8 @@ public abstract class SignedDocumentValidator implements DocumentValidator {
 	 * contains the constraint file. If null or empty the default file is used.
 	 *
 	 * @param policyDataStream
-	 *            {@code InputStream}
+	 *            the {@code InputStream} with the validation policy
+	 * @return the validation reports
 	 */
 	@Override
 	public Reports validateDocument(final InputStream policyDataStream) {
@@ -259,9 +266,9 @@ public abstract class SignedDocumentValidator implements DocumentValidator {
 	 * {@code validationPolicyDom} contains the constraint file. If null or
 	 * empty the default file is used.
 	 *
-	 * @param validationPolicyDom
-	 *            {@code Document}
-	 * @return
+	 * @param validationPolicyJaxb
+	 *            the {@code ConstraintsParameters} to use in the validation process
+	 * @return the validation reports
 	 */
 	@Override
 	public Reports validateDocument(final ConstraintsParameters validationPolicyJaxb) {
@@ -275,8 +282,8 @@ public abstract class SignedDocumentValidator implements DocumentValidator {
 	 * empty the default file is used.
 	 *
 	 * @param validationPolicy
-	 *            {@code ValidationPolicy}
-	 * @return
+	 *            the {@code ValidationPolicy} to use in the validation process
+	 * @return the validation reports
 	 */
 	@Override
 	public Reports validateDocument(final ValidationPolicy validationPolicy) {
@@ -292,12 +299,16 @@ public abstract class SignedDocumentValidator implements DocumentValidator {
 
 		List<AdvancedSignature> allSignatureList = processSignaturesValidation(validationContext, structuralValidation);
 
-		DiagnosticDataBuilder builder = new DiagnosticDataBuilder();
-		builder.document(document).containerInfo(getContainerInfo()).foundSignatures(allSignatureList)
-				.usedCertificates(validationContext.getProcessedCertificates()).trustedListsCertificateSource(certificateVerifier.getTrustedCertSource())
-				.validationDate(validationContext.getCurrentTime());
+		final DiagnosticData diagnosticData = new DiagnosticDataBuilder().document(document).containerInfo(getContainerInfo()).foundSignatures(allSignatureList)
+				.usedCertificates(validationContext.getProcessedCertificates()).usedRevocations(validationContext.getProcessedRevocations())
+				.includeRawCertificateTokens(certificateVerifier.isIncludeCertificateTokenValues())
+				.includeRawRevocationData(certificateVerifier.isIncludeCertificateRevocationValues())
+				.includeRawTimestampTokens(certificateVerifier.isIncludeTimestampTokenValues())
+				.certificateSourceTypes(validationContext.getCertificateSourceTypes())
+				.trustedCertificateSource(certificateVerifier.getTrustedCertSource())
+				.validationDate(validationContext.getCurrentTime()).build();
 
-		return processValidationPolicy(builder.build(), validationPolicy);
+		return processValidationPolicy(diagnosticData, validationPolicy);
 	}
 
 	@Override
@@ -336,14 +347,14 @@ public abstract class SignedDocumentValidator implements DocumentValidator {
 	/**
 	 * This method allows to retrieve the container information (ASiC Container)
 	 * 
-	 * @return
+	 * @return the container information
 	 */
 	protected ContainerInfo getContainerInfo() {
 		return null;
 	}
 
 	protected Reports processValidationPolicy(DiagnosticData diagnosticData, ValidationPolicy validationPolicy) {
-		final ProcessExecutor executor = provideProcessExecutorInstance();
+		final ProcessExecutor<Reports> executor = provideProcessExecutorInstance();
 		executor.setValidationPolicy(validationPolicy);
 		executor.setValidationLevel(validationLevel);
 		executor.setDiagnosticData(diagnosticData);
@@ -374,7 +385,7 @@ public abstract class SignedDocumentValidator implements DocumentValidator {
 	 *
 	 * @return {@code ProcessExecutor}
 	 */
-	public ProcessExecutor provideProcessExecutorInstance() {
+	public ProcessExecutor<Reports> provideProcessExecutorInstance() {
 		if (processExecutor == null) {
 			processExecutor = new CustomProcessExecutor();
 		}
@@ -439,7 +450,7 @@ public abstract class SignedDocumentValidator implements DocumentValidator {
 	 */
 	private void prepareCertificatesAndTimestamps(final List<AdvancedSignature> allSignatureList, final ValidationContext validationContext) {
 		for (final AdvancedSignature signature : allSignatureList) {
-			final List<CertificateToken> candidates = signature.getCertificateSource().getCertificates();
+			final List<CertificateToken> candidates = signature.getCertificates();
 			for (final CertificateToken certificateToken : candidates) {
 				validationContext.addCertificateTokenForVerification(certificateToken);
 			}

@@ -1,19 +1,19 @@
 /**
  * DSS - Digital Signature Services
  * Copyright (C) 2015 European Commission, provided under the CEF programme
- *
+ * 
  * This file is part of the "DSS - Digital Signature Services" project.
- *
+ * 
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- *
+ * 
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
@@ -39,26 +39,24 @@ public class TimestampReference implements Serializable {
 
 	private DigestAlgorithm digestAlgorithm;
 	private String digestValue;
-	private TimestampReferenceCategory category;
+	private TimestampedObjectType category;
 
 	public TimestampReference(final String signatureId) {
-
 		if (signatureId == null) {
 			throw new NullPointerException();
 		}
 		this.signatureId = signatureId;
 		this.digestAlgorithm = DigestAlgorithm.SHA1;
 		this.digestValue = Utils.toBase64(DSSUtils.digest(DigestAlgorithm.SHA1, signatureId.getBytes()));
-		this.category = TimestampReferenceCategory.SIGNATURE;
+		this.category = TimestampedObjectType.SIGNATURE;
 	}
 
-	public TimestampReference(final String signatureId, final TimestampReferenceCategory category) {
+	public TimestampReference(final String signatureId, final TimestampedObjectType category) {
 		this(signatureId);
 		this.category = category;
 	}
 
 	public TimestampReference(final DigestAlgorithm digestAlgorithm, final String digestValue) {
-
 		if (digestAlgorithm == null) {
 			throw new NullPointerException("digestAlgorithm");
 		}
@@ -67,11 +65,10 @@ public class TimestampReference implements Serializable {
 			throw new NullPointerException("digestValue");
 		}
 		this.digestValue = digestValue;
-		this.category = TimestampReferenceCategory.CERTIFICATE;
+		this.category = TimestampedObjectType.CERTIFICATE;
 	}
 
-	public TimestampReference(final DigestAlgorithm digestAlgorithm, final String digestValue, final TimestampReferenceCategory category) {
-
+	public TimestampReference(final DigestAlgorithm digestAlgorithm, final String digestValue, final TimestampedObjectType category) {
 		this(digestAlgorithm, digestValue);
 		this.category = category;
 	}
@@ -84,7 +81,7 @@ public class TimestampReference implements Serializable {
 		return digestValue;
 	}
 
-	public TimestampReferenceCategory getCategory() {
+	public TimestampedObjectType getCategory() {
 		return category;
 	}
 

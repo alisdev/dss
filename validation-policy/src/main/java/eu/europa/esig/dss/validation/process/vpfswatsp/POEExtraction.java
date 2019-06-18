@@ -1,3 +1,23 @@
+/**
+ * DSS - Digital Signature Services
+ * Copyright (C) 2015 European Commission, provided under the CEF programme
+ * 
+ * This file is part of the "DSS - Digital Signature Services" project.
+ * 
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ */
 package eu.europa.esig.dss.validation.process.vpfswatsp;
 
 import java.util.ArrayList;
@@ -8,11 +28,9 @@ import java.util.Map;
 import java.util.Set;
 
 import eu.europa.esig.dss.jaxb.diagnostic.XmlDigestAlgoAndValue;
-import eu.europa.esig.dss.jaxb.diagnostic.XmlSignedObjects;
-import eu.europa.esig.dss.jaxb.diagnostic.XmlSignedSignature;
-import eu.europa.esig.dss.jaxb.diagnostic.XmlTimestampedTimestamp;
+import eu.europa.esig.dss.jaxb.diagnostic.XmlTimestampedObject;
 import eu.europa.esig.dss.utils.Utils;
-import eu.europa.esig.dss.validation.TimestampReferenceCategory;
+import eu.europa.esig.dss.validation.TimestampedObjectType;
 import eu.europa.esig.dss.validation.reports.wrapper.CertificateWrapper;
 import eu.europa.esig.dss.validation.reports.wrapper.DiagnosticData;
 import eu.europa.esig.dss.validation.reports.wrapper.RevocationWrapper;
@@ -70,34 +88,26 @@ public class POEExtraction {
 
 		Date productionTime = timestamp.getProductionTime();
 
-		XmlSignedObjects signedObjects = timestamp.getSignedObjects();
-		if (signedObjects != null) {
-			if (Utils.isCollectionNotEmpty(signedObjects.getSignedSignature())) {
-				// SIGNATURES and TIMESTAMPS
-				for (XmlSignedSignature signedSignature : signedObjects.getSignedSignature()) {
-					addPOE(signedSignature.getId(), productionTime);
-				}
-				for (XmlTimestampedTimestamp timstampedTimastamp : signedObjects.getTimestampedTimestamp()) {
-					addPOE(timstampedTimastamp.getId(), productionTime);
-				}
-			}
+		List<XmlTimestampedObject> timestampedObjects = timestamp.getTimestampedObjects();
+		if (Utils.isCollectionNotEmpty(timestampedObjects)) {
 
-			List<XmlDigestAlgoAndValue> digestAlgoAndValues = signedObjects.getDigestAlgoAndValues();
-			if (Utils.isCollectionNotEmpty(digestAlgoAndValues)) {
-				for (XmlDigestAlgoAndValue digestAlgoAndValue : digestAlgoAndValues) {
-					if (Utils.areStringsEqual(TimestampReferenceCategory.CERTIFICATE.name(), digestAlgoAndValue.getCategory())) {
-						String certificateId = getCertificateIdByDigest(digestAlgoAndValue, diagnosticData);
-						if (certificateId != null) {
-							addPOE(certificateId, productionTime);
-						}
-					} else if (Utils.areStringsEqual(TimestampReferenceCategory.REVOCATION.name(), digestAlgoAndValue.getCategory())) {
-						String revocationId = getRevocationIdByDigest(digestAlgoAndValue, diagnosticData);
-						if (revocationId != null) {
-							addPOE(revocationId, productionTime);
-						}
+			for (XmlTimestampedObject xmlTimestampedObject : timestampedObjects) {
+				if (Utils.isStringNotEmpty(xmlTimestampedObject.getId())) {
+					// SIGNATURES and TIMESTAMPS
+					addPOE(xmlTimestampedObject.getId(), productionTime);
+				} else if (TimestampedObjectType.CERTIFICATE == xmlTimestampedObject.getCategory()) {
+					String certificateId = getCertificateIdByDigest(xmlTimestampedObject.getDigestAlgoAndValue(), diagnosticData);
+					if (certificateId != null) {
+						addPOE(certificateId, productionTime);
+					}
+				} else if (TimestampedObjectType.REVOCATION == xmlTimestampedObject.getCategory()) {
+					String revocationId = getRevocationIdByDigest(xmlTimestampedObject.getDigestAlgoAndValue(), diagnosticData);
+					if (revocationId != null) {
+						addPOE(revocationId, productionTime);
 					}
 				}
 			}
+
 		}
 	}
 
@@ -168,12 +178,12 @@ public class POEExtraction {
 	}
 
 	public Date getLowestPOE(final String id, final Date controlTime) {
-		Date lowestDate = null;
+		Date lowestDate = controlTime;
 		List<Date> dates = poe.get(id);
 		if (dates != null) {
 			for (Date date : dates) {
 				if (date.compareTo(controlTime) <= 0) {
-					if (lowestDate == null) {
+					if (lowestDate == controlTime) {
 						lowestDate = date;
 					} else if (lowestDate.after(date)) {
 						lowestDate = date;

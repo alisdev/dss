@@ -1,25 +1,54 @@
+/**
+ * DSS - Digital Signature Services
+ * Copyright (C) 2015 European Commission, provided under the CEF programme
+ * 
+ * This file is part of the "DSS - Digital Signature Services" project.
+ * 
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ */
 package eu.europa.esig.dss.utils.impl;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 import eu.europa.esig.dss.utils.Utils;
 
 public abstract class AbstractUtilsTest {
+
+	@Rule
+	public TemporaryFolder folder = new TemporaryFolder();
 
 	@Test
 	public void isStringEmpty() {
@@ -170,10 +199,10 @@ public abstract class AbstractUtilsTest {
 	@Test
 	public void subarray() {
 		byte[] array = new byte[] { 1, 2, 3, 4, 5 };
-		assertTrue(Arrays.equals(array, Utils.subarray(array, 0, array.length)));
-		assertTrue(Arrays.equals(new byte[] { 1, 2, 3 }, Utils.subarray(array, 0, 3)));
-		assertTrue(Arrays.equals(new byte[] {}, Utils.subarray(array, 0, 0)));
-		assertTrue(Arrays.equals(null, Utils.subarray(null, 0, 0)));
+		assertArrayEquals(array, Utils.subarray(array, 0, array.length));
+		assertArrayEquals(new byte[] { 1, 2, 3 }, Utils.subarray(array, 0, 3));
+		assertArrayEquals(new byte[] {}, Utils.subarray(array, 0, 0));
+		assertArrayEquals(null, Utils.subarray(null, 0, 0));
 	}
 
 	@Test
@@ -221,11 +250,29 @@ public abstract class AbstractUtilsTest {
 		assertEquals(3, Utils.collectionSize(list));
 	}
 
+	@Test(expected = Exception.class)
+	public void toHexNull() {
+		Utils.toHex(null);
+	}
+
 	@Test
 	public void toHex() {
 		assertEquals("", Utils.toHex(new byte[] {}));
 		assertEquals("0102030405", Utils.toHex(new byte[] { 1, 2, 3, 4, 5 }));
 		assertEquals("61027a6a09", Utils.toHex(new byte[] { 'a', 2, 'z', 'j', 9 }));
+	}
+
+	@Test
+	public void fromHex() {
+		assertNotNull(Utils.fromHex(""));
+		assertArrayEquals(new byte[] { 1, 2, 3, 4, 5 }, Utils.fromHex("0102030405"));
+		assertArrayEquals(new byte[] { 'a', 2, 'z', 'j', 9 }, Utils.fromHex("61027a6a09"));
+		assertArrayEquals(new byte[] { 'a', 2, 'z', 'j', 9 }, Utils.fromHex("61027A6A09"));
+	}
+
+	@Test(expected = Exception.class)
+	public void fromHexNull() {
+		Utils.fromHex(null);
 	}
 
 	@Test
@@ -236,8 +283,8 @@ public abstract class AbstractUtilsTest {
 
 	@Test
 	public void fromBase64() {
-		assertTrue(Arrays.equals(new byte[] { 1, 2, 3, 4, 5 }, Utils.fromBase64("AQIDBAU=")));
-		assertTrue(Arrays.equals(new byte[] { 1, 2, 3, 4, 5 }, Utils.fromBase64("\nAQI\nD BA\tU=\n")));
+		assertArrayEquals(new byte[] { 1, 2, 3, 4, 5 }, Utils.fromBase64("AQIDBAU="));
+		assertArrayEquals(new byte[] { 1, 2, 3, 4, 5 }, Utils.fromBase64("\nAQI\nD BA\tU=\n"));
 	}
 
 	@Test
@@ -248,7 +295,7 @@ public abstract class AbstractUtilsTest {
 		FileOutputStream fos = new FileOutputStream(newFileName);
 		fos.write(newFileContent.getBytes("UTF-8"));
 		fos.close();
-		assertTrue(Arrays.equals(newFileContent.getBytes("UTF-8"), Utils.toByteArray(new FileInputStream(newFileName))));
+		assertArrayEquals(newFileContent.getBytes("UTF-8"), Utils.toByteArray(new FileInputStream(newFileName)));
 	}
 
 	@Test
@@ -276,4 +323,39 @@ public abstract class AbstractUtilsTest {
 		listFiles = Utils.listFiles(folder, extensions, true);
 		assertTrue(Utils.isCollectionEmpty(listFiles));
 	}
+	
+	@Test
+	public void getInputStreamSize() throws IOException {
+		
+		try (InputStream is = new ByteArrayInputStream("Hello World!".getBytes())) {
+			assertEquals(12, Utils.getInputStreamSize(is));
+		}
+		
+		try (InputStream emptyIs = new ByteArrayInputStream(new byte[0])) {
+			assertEquals(0, Utils.getInputStreamSize(emptyIs));
+		}
+
+		String newFileName = "target/sample.txt";
+		String newFileContent = "Hello world!\r\n";
+		
+		try (FileOutputStream fos = new FileOutputStream(newFileName)) {
+			fos.write(newFileContent.getBytes("UTF-8"));
+		}
+		try (FileInputStream fileInputStream = new FileInputStream(newFileName)) {
+			assertEquals(14, Utils.getInputStreamSize(fileInputStream));
+		}
+		
+	}
+
+	@Test
+	public void clearDirectory() throws IOException {
+		File tempFolder = folder.newFolder("test");
+		Utils.cleanDirectory(tempFolder);
+	}
+
+	@Test(expected = FileNotFoundException.class)
+	public void clearDirectoryNotFound() throws IOException {
+		Utils.cleanDirectory(new File("wrong"));
+	}
+
 }

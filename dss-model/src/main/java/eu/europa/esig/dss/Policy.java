@@ -1,19 +1,19 @@
 /**
  * DSS - Digital Signature Services
  * Copyright (C) 2015 European Commission, provided under the CEF programme
- *
+ * 
  * This file is part of the "DSS - Digital Signature Services" project.
- *
+ * 
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- *
+ * 
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
@@ -48,7 +48,7 @@ public class Policy implements Serializable {
 	/**
 	 * Get the signature policy (EPES)
 	 *
-	 * @return
+	 * @return the policy id
 	 */
 	public String getId() {
 		return id;
@@ -58,6 +58,7 @@ public class Policy implements Serializable {
 	 * Set the signature policy (EPES)
 	 *
 	 * @param id
+	 *            the policy id
 	 */
 	public void setId(final String id) {
 		this.id = id;
@@ -66,7 +67,7 @@ public class Policy implements Serializable {
 	/**
 	 * Get the identifier qualifier
 	 *
-	 * @return
+	 * @return the qualifier
 	 */
 	public String getQualifier() {
 		return qualifier;
@@ -76,6 +77,7 @@ public class Policy implements Serializable {
 	 * Set the identifier qualifier
 	 *
 	 * @param qualifier
+	 *            the qualifier
 	 */
 	public void setQualifier(String qualifier) {
 		this.qualifier = qualifier;
@@ -94,6 +96,7 @@ public class Policy implements Serializable {
 	 * Set the signature policy description
 	 *
 	 * @param description
+	 *            the policy description
 	 */
 	public void setDescription(String description) {
 		this.description = description;
@@ -102,7 +105,7 @@ public class Policy implements Serializable {
 	/**
 	 * Return the hash algorithm for the signature policy
 	 *
-	 * @return
+	 * @return the used digest algorithm for the policy
 	 */
 	public DigestAlgorithm getDigestAlgorithm() {
 		return digestAlgorithm;
@@ -112,6 +115,7 @@ public class Policy implements Serializable {
 	 * Set the hash algorithm for the explicit signature policy
 	 *
 	 * @param digestAlgorithm
+	 *            the used digest algorithm for the policy
 	 */
 	public void setDigestAlgorithm(final DigestAlgorithm digestAlgorithm) {
 		this.digestAlgorithm = digestAlgorithm;
@@ -120,7 +124,7 @@ public class Policy implements Serializable {
 	/**
 	 * Get the hash value of the explicit signature policy
 	 *
-	 * @return
+	 * @return the digest value for the policy
 	 */
 	public byte[] getDigestValue() {
 		return digestValue;
@@ -130,6 +134,7 @@ public class Policy implements Serializable {
 	 * Set the hash value of implicit signature policy
 	 *
 	 * @param digestValue
+	 *            the digest of the policy
 	 */
 	public void setDigestValue(final byte[] digestValue) {
 		this.digestValue = digestValue;
@@ -148,6 +153,7 @@ public class Policy implements Serializable {
 	 * Set the SP URI (signature policy URI)
 	 *
 	 * @param spuri
+	 *            the signature policy URI
 	 */
 	public void setSpuri(String spuri) {
 		this.spuri = spuri;
