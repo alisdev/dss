@@ -21,6 +21,7 @@
 package eu.europa.esig.dss.pades;
 
 import java.awt.Color;
+import java.awt.Font;
 
 /**
  * This class allows to custom text generation in the PAdES visible signature
@@ -28,10 +29,9 @@ import java.awt.Color;
  */
 public class SignatureImageTextParameters {
 
-	public static final Font DEFAULT_FONT = new Font("serif", Font.PLAIN, 8);
 	public static final Color DEFAULT_BACKGROUND_COLOR = Color.WHITE;
 	public static final float DEFAULT_MARGIN = 5f;
-	public static final Color DEFAUT_TEXT_COLOR = Color.BLACK;
+	public static final Color DEFAULT_TEXT_COLOR = Color.BLACK;
 
 	/**
 	 * Enum to define where to add the signer name on the image

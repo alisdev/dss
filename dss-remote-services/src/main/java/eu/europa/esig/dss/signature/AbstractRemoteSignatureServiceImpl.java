@@ -142,7 +142,7 @@ public class AbstractRemoteSignatureServiceImpl {
 					textParameters.setSignerNamePosition(SignerPosition.valueOf(signerNamePosition.name()));
 				textParameters.setText(remoteTextParameters.getText());
 				imageParameters.setTextParameters(textParameters);
-				padesParams.setImageParameters(imageParameters);
+				padesParams.setSignatureImageParameters(imageParameters);
 			}
 		}
 	}

@@ -104,7 +104,7 @@ public class CAdESLevelBaselineLTA extends CAdESSignatureExtension {
 
 		final byte[] encodedToTimestamp = timestampExtractor.getArchiveTimestampDataV3(signerInformation, atsHashIndexAttribute, originalDocumentDigest);
 
-		final ASN1Object timeStampAttributeValue = getTimeStampAttributeValue(encodedToTimestamp, timestampDigestAlgorithm,
+		final ASN1Object timeStampAttributeValue = getTimeStampAttributeValue(encodedToTimestamp, parameters, //alisdev
 				atsHashIndexAttribute);
 
 		return unsignedAttributes.add(OID.id_aa_ets_archiveTimestampV3, timeStampAttributeValue);

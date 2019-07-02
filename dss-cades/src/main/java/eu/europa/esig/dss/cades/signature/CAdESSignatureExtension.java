@@ -27,7 +27,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 
-import org.apache.commons.codec.binary.Hex;
 import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1Object;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
@@ -225,36 +224,23 @@ abstract class CAdESSignatureExtension implements SignatureExtension<CAdESSignat
 		return cmsSignedData;
 	}
 
-<<<<<<< HEAD
-	protected ASN1Object getTimeStampAttributeValue(TSPSource tspSource, byte[] message, CAdESSignatureParameters parameters) {
-
-		ASN1Object signatureTimeStampValue = getTimeStampAttributeValue(tspSource, message, parameters, new Attribute[0]);
-		return signatureTimeStampValue;
-	}
-
-	public static ASN1Object getTimeStampAttributeValue(final TSPSource tspSource, final byte[] messageToTimestamp, CAdESSignatureParameters parameters,
-=======
 	protected ASN1Object getTimeStampAttributeValue(byte[] message, CAdESSignatureParameters parameters) {
-		final DigestAlgorithm timestampDigestAlgorithm = parameters.getSignatureTimestampParameters().getDigestAlgorithm();
-		return getTimeStampAttributeValue(message, timestampDigestAlgorithm);
+		return getTimeStampAttributeValue(message, parameters); // alisdev
 	}
 
-	public ASN1Object getTimeStampAttributeValue(final byte[] messageToTimestamp, final DigestAlgorithm timestampDigestAlgorithm,
->>>>>>> develop-upstream
+	public ASN1Object getTimeStampAttributeValue(final byte[] messageToTimestamp, CAdESSignatureParameters parameters, // alisdev
 			final Attribute... attributesForTimestampToken) {
 		try {
 			TimestampParameters signatureTimestampParameters = parameters.getSignatureTimestampParameters();
 			final DigestAlgorithm timestampDigestAlgorithm = signatureTimestampParameters.getDigestAlgorithm();
 			byte[] encodedTimeStampToken = signatureTimestampParameters.getEncodedTimeStampToken();
-
-<<<<<<< HEAD
-			if (encodedTimeStampToken == null) {
+			if (encodedTimeStampToken == null) { // alisdev
 				if (LOG.isDebugEnabled()) {
-					LOG.debug("Message to timestamp is: " + Hex.encodeHexString(messageToTimestamp));
+					LOG.debug("Message to timestamp is: " +  Utils.toHex(messageToTimestamp));
 				}
 				byte[] timestampDigest = DSSUtils.digest(timestampDigestAlgorithm, messageToTimestamp);
 				if (LOG.isDebugEnabled()) {
-					LOG.debug("Digested ({}) message to timestamp is {}", new Object[] { timestampDigestAlgorithm, Hex.encodeHexString(timestampDigest) });
+					LOG.debug("Digested ({}) message to timestamp is {}", new Object[] { timestampDigestAlgorithm, Utils.toHex(timestampDigest) });
 				}
 				final TimeStampToken timeStampToken = tspSource.getTimeStampResponse(timestampDigestAlgorithm, timestampDigest);
 
@@ -263,24 +249,12 @@ abstract class CAdESSignatureExtension implements SignatureExtension<CAdESSignat
 				}
 				if (LOG.isDebugEnabled()) {
 					final byte[] messageImprintDigest = timeStampToken.getTimeStampInfo().getMessageImprintDigest();
-					LOG.debug("Digested ({}) message in timestamp is {}", new Object[] { timestampDigestAlgorithm, Hex.encodeHexString(messageImprintDigest) });
+					LOG.debug("Digested ({}) message in timestamp is {}", new Object[] { timestampDigestAlgorithm, Utils.toHex(messageImprintDigest) });
 				}
 				encodedTimeStampToken = timeStampToken.getEncoded();
 			}
 
 			CMSSignedData cmsSignedDataTimeStampToken = new CMSSignedData(encodedTimeStampToken);
-=======
-			if (LOG.isDebugEnabled()) {
-				LOG.debug("Message to timestamp is: {}", Utils.toHex(messageToTimestamp));
-			}
-			byte[] timestampDigest = DSSUtils.digest(timestampDigestAlgorithm, messageToTimestamp);
-			if (LOG.isDebugEnabled()) {
-				LOG.debug("Digested ({}) message to timestamp is {}", timestampDigestAlgorithm, Utils.toHex(timestampDigest));
-			}
-
-			final TimeStampToken timeStampToken = tspSource.getTimeStampResponse(timestampDigestAlgorithm, timestampDigest);
-			CMSSignedData cmsSignedDataTimeStampToken = timeStampToken.toCMSSignedData();
->>>>>>> develop-upstream
 
 			// TODO (27/08/2014): attributesForTimestampToken cannot be null: to be modified
 			if (attributesForTimestampToken != null) {
@@ -305,6 +279,8 @@ abstract class CAdESSignatureExtension implements SignatureExtension<CAdESSignat
 			final byte[] newTimeStampTokenBytes = cmsSignedDataTimeStampToken.getEncoded();
 			return DSSASN1Utils.toASN1Primitive(newTimeStampTokenBytes);
 		} catch (IOException e) {
+			throw new DSSException(e);
+		} catch (CMSException e) {
 			throw new DSSException(e);
 		}
 
