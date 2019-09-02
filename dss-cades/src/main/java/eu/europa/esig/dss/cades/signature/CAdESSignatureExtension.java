@@ -224,11 +224,7 @@ abstract class CAdESSignatureExtension implements SignatureExtension<CAdESSignat
 		return cmsSignedData;
 	}
 
-	protected ASN1Object getTimeStampAttributeValue(byte[] message, CAdESSignatureParameters parameters) {
-		return getTimeStampAttributeValue(message, parameters); // alisdev
-	}
-
-	public ASN1Object getTimeStampAttributeValue(final byte[] messageToTimestamp, CAdESSignatureParameters parameters, // alisdev
+	protected ASN1Object getTimeStampAttributeValue(final byte[] messageToTimestamp, CAdESSignatureParameters parameters, // alisdev
 			final Attribute... attributesForTimestampToken) {
 		try {
 			TimestampParameters signatureTimestampParameters = parameters.getSignatureTimestampParameters();
