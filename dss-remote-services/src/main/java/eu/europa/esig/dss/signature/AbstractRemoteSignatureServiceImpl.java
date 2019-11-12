@@ -25,8 +25,11 @@ import java.util.List;
 
 import eu.europa.esig.dss.ASiCContainerType;
 import eu.europa.esig.dss.AbstractSignatureParameters;
+import eu.europa.esig.dss.DSSDocument;
 import eu.europa.esig.dss.DSSException;
 import eu.europa.esig.dss.DSSUtils;
+import eu.europa.esig.dss.InMemoryDocument;
+import eu.europa.esig.dss.MimeType;
 import eu.europa.esig.dss.RemoteCertificate;
 import eu.europa.esig.dss.RemoteSignatureImageParameters;
 import eu.europa.esig.dss.RemoteSignatureImageTextParameters;
@@ -125,18 +128,30 @@ public class AbstractRemoteSignatureServiceImpl {
 	 * @param padesParams
 	 * @param remoteParameters
 	 */
-	private void fillPAdESVisibleSignatureParameters(PAdESSignatureParameters padesParams, RemoteSignatureParameters remoteParameters) {
+	private void fillPAdESVisibleSignatureParameters(PAdESSignatureParameters padesParams,
+			RemoteSignatureParameters remoteParameters) {
 		RemoteSignatureImageParameters remoteImageParameters = remoteParameters.getImageParameters();
 		if (remoteImageParameters != null) {
 			SignatureImageParameters imageParameters = new SignatureImageParameters();
+			byte[] image = remoteImageParameters.getImage();
+			if (image != null) {
+				InMemoryDocument inMemoryDocument = new InMemoryDocument(image);
+				inMemoryDocument.setMimeType(MimeType.PNG);
+				imageParameters.setImage(inMemoryDocument);
+			}
+			Integer dpi = remoteImageParameters.getDpi();
+			imageParameters.setDpi(dpi != null ? dpi : 72);
 			imageParameters.setPage(remoteImageParameters.getPage());
 			imageParameters.setxAxis(remoteImageParameters.getxAxis());
 			imageParameters.setyAxis(remoteImageParameters.getyAxis());
+			imageParameters.setHeight((int) remoteImageParameters.getHeight());
+			imageParameters.setWidth((int) remoteImageParameters.getWidth());
 			imageParameters.setSignatureReason(remoteImageParameters.getSignatureReason());
 			imageParameters.setSignerLocation(remoteImageParameters.getSignerLocation());
 			RemoteSignatureImageTextParameters remoteTextParameters = remoteImageParameters.getTextParameters();
 			if (remoteTextParameters != null) {
-				RemoteSignatureImageTextParameters.SignerPosition signerNamePosition = remoteTextParameters.getSignerNamePosition();
+				RemoteSignatureImageTextParameters.SignerPosition signerNamePosition = remoteTextParameters
+						.getSignerNamePosition();
 				SignatureImageTextParameters textParameters = new SignatureImageTextParameters();
 				if (signerNamePosition != null)
 					textParameters.setSignerNamePosition(SignerPosition.valueOf(signerNamePosition.name()));

@@ -48,8 +48,56 @@ public class RemoteSignatureImageParameters implements Serializable {
      * This variable defines the position of the image in the PDF page (Y axis)
      */
     private float yAxis;
-
+    
     /**
+     * This variable defines height of the image
+     */
+    private float height;
+    
+    /**
+     * This variable defines width of the image
+     */
+    private float width;
+
+	/**
+	 * This variable defines the DPI of the image
+	 */
+	private Integer dpi;
+	
+    public Integer getDpi() {
+		return dpi;
+	}
+
+	public void setDpi(Integer dpi) {
+		this.dpi = dpi;
+	}
+
+	public float getHeight() {
+		return height;
+	}
+
+	public void setHeight(float height) {
+		this.height = height;
+	}
+
+	public float getWidth() {
+		return width;
+	}
+
+	public void setWidth(float width) {
+		this.width = width;
+	}
+	
+	
+	public float getWidht() {
+		return width;
+	}
+
+	public void setWidht(float widht) {
+		this.width = widht;
+	}
+
+	/**
      * This variable is use to defines the text to generate on the image
      */
     private RemoteSignatureImageTextParameters textParameters;
