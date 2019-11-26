@@ -2,57 +2,56 @@ package eu.europa.esig.dss.validation.executor;
 
 import static org.junit.Assert.assertNotNull;
 
-import java.io.FileInputStream;
+import java.io.File;
 import java.util.Iterator;
 import java.util.List;
 
-import eu.europa.esig.dss.jaxb.diagnostic.DiagnosticData;
-import eu.europa.esig.dss.validation.policy.EtsiValidationPolicy;
-import eu.europa.esig.dss.validation.policy.XmlUtils;
-import eu.europa.esig.dss.validation.reports.DetailedReport;
+import eu.europa.esig.dss.detailedreport.DetailedReport;
+import eu.europa.esig.dss.diagnostic.DiagnosticDataFacade;
+import eu.europa.esig.dss.diagnostic.jaxb.XmlDiagnosticData;
+import eu.europa.esig.dss.policy.EtsiValidationPolicy;
+import eu.europa.esig.dss.policy.ValidationPolicy;
+import eu.europa.esig.dss.policy.ValidationPolicyFacade;
+import eu.europa.esig.dss.policy.jaxb.Algo;
+import eu.europa.esig.dss.policy.jaxb.AlgoExpirationDate;
+import eu.europa.esig.dss.policy.jaxb.BasicSignatureConstraints;
+import eu.europa.esig.dss.policy.jaxb.CertificateConstraints;
+import eu.europa.esig.dss.policy.jaxb.ConstraintsParameters;
+import eu.europa.esig.dss.policy.jaxb.CryptographicConstraint;
+import eu.europa.esig.dss.policy.jaxb.RevocationConstraints;
+import eu.europa.esig.dss.policy.jaxb.SignatureConstraints;
+import eu.europa.esig.dss.policy.jaxb.TimestampConstraints;
+import eu.europa.esig.dss.simplereport.SimpleReport;
 import eu.europa.esig.dss.validation.reports.Reports;
-import eu.europa.esig.dss.validation.reports.SimpleReport;
-import eu.europa.esig.jaxb.policy.Algo;
-import eu.europa.esig.jaxb.policy.AlgoExpirationDate;
-import eu.europa.esig.jaxb.policy.BasicSignatureConstraints;
-import eu.europa.esig.jaxb.policy.CertificateConstraints;
-import eu.europa.esig.jaxb.policy.ConstraintsParameters;
-import eu.europa.esig.jaxb.policy.CryptographicConstraint;
-import eu.europa.esig.jaxb.policy.RevocationConstraints;
-import eu.europa.esig.jaxb.policy.SignatureConstraints;
-import eu.europa.esig.jaxb.policy.TimestampConstraints;
 
 public abstract class AbstractCryptographicConstraintsTest extends AbstractValidationExecutorTest {
 
-	
 	protected ConstraintsParameters constraintsParameters = null;
-	protected CustomProcessExecutor executor = null;
-	protected EtsiValidationPolicy validationPolicy = null;
+	protected DefaultSignatureProcessExecutor executor = null;
+	protected ValidationPolicy validationPolicy = null;
 
 	protected static final String ALGORITHM_DSA = "DSA";
 	protected static final String ALGORITHM_RSA = "RSA";
-	protected static final String ALGORITHM_RSA2048 = "RSA2048";
-	protected static final String ALGORITHM_RSA4096 = "RSA4096";
 	protected static final String ALGORITHM_SHA1 = "SHA1";
 	protected static final String ALGORITHM_SHA256 = "SHA256";
 	
 	protected static final String BIT_SIZE_4096 = "4096";
 	
-	protected String validationPolicyFile = null; 
+	protected File validationPolicyFile = null;
 	
-	protected DiagnosticData initializeExecutor(String diagnosticDataFile) throws Exception {
-		FileInputStream fis = new FileInputStream(diagnosticDataFile);
-		DiagnosticData diagnosticData = XmlUtils.getJAXBObjectFromString(fis, DiagnosticData.class, "/xsd/DiagnosticData.xsd");
+	protected XmlDiagnosticData initializeExecutor(String diagnosticDataFile) throws Exception {
+
+		XmlDiagnosticData diagnosticData = DiagnosticDataFacade.newFacade().unmarshall(new File(diagnosticDataFile));
 		assertNotNull(diagnosticData);
 
-		executor = new CustomProcessExecutor();
+		executor = new DefaultSignatureProcessExecutor();
 		executor.setDiagnosticData(diagnosticData);
 		executor.setCurrentTime(diagnosticData.getValidationDate());
 		return diagnosticData;
 	}
 
 	protected ConstraintsParameters loadConstraintsParameters() throws Exception {
-		ConstraintsParameters constraintsParameters = loadConstraintsParameters(validationPolicyFile);
+		ConstraintsParameters constraintsParameters = ValidationPolicyFacade.newFacade().unmarshall(validationPolicyFile);
 		this.constraintsParameters = constraintsParameters;
 		return constraintsParameters;
 	}
@@ -143,7 +142,38 @@ public abstract class AbstractCryptographicConstraintsTest extends AbstractValid
 		return reports.getDetailedReport();
 	}
 	
-	protected void setAlgoExpirationDate(CryptographicConstraint cryptographicConstraint, String algorithmName, String expirationDate) {
+	protected void setAlgoExpDate(CryptographicConstraint defaultCryptographicConstraint, String algorithm, Integer keySize, String date) {
+		if(keySize == 0) {
+			setDigestAlgoExpirationDate(defaultCryptographicConstraint, algorithm, date);
+
+		}else {
+			setAlgoExpirationDate(defaultCryptographicConstraint, algorithm, date, keySize);
+
+		}
+	}
+	
+	private void setAlgoExpirationDate(CryptographicConstraint cryptographicConstraint, String algorithmName, String expirationDate, Integer keySize) {
+		
+		AlgoExpirationDate algoExpirationDate = cryptographicConstraint.getAlgoExpirationDate();
+		List<Algo> algorithms = algoExpirationDate.getAlgo();
+		boolean listContainsAlgorithms = false;
+		for (Algo algorithm : algorithms) {
+			if (algorithm.getValue().equals(algorithmName) && algorithm.getSize().equals(keySize)) {
+				algorithm.setDate(expirationDate);
+				listContainsAlgorithms = true;
+			}
+		}
+		if (!listContainsAlgorithms) {
+			Algo algo = new Algo();
+			algo.setValue(algorithmName);
+			algo.setDate(expirationDate);
+			algo.setSize(keySize);
+			algorithms.add(algo);
+		}
+		
+	}
+	
+	private void setDigestAlgoExpirationDate(CryptographicConstraint cryptographicConstraint, String algorithmName, String expirationDate) {
 		
 		AlgoExpirationDate algoExpirationDate = cryptographicConstraint.getAlgoExpirationDate();
 		List<Algo> algorithms = algoExpirationDate.getAlgo();
@@ -163,7 +193,17 @@ public abstract class AbstractCryptographicConstraintsTest extends AbstractValid
 		
 	}
 	
-	protected void removeAlgorithm(List<Algo> algorithms, String algorithmName) {
+	protected void removeAlgo(List<Algo> algorithms, String algorithm, Integer keySize) {
+		if(keySize == 0) {
+			removeDigestAlgorithm(algorithms, algorithm);
+
+		}else {
+			removeEncryptionAlgorithm(algorithms, algorithm, keySize);
+
+		}
+	}
+	
+	private void removeDigestAlgorithm(List<Algo> algorithms, String algorithmName) {
 		Iterator<Algo> iterator = algorithms.iterator();
 		while(iterator.hasNext()) {
 			Algo algo = iterator.next();
@@ -173,10 +213,20 @@ public abstract class AbstractCryptographicConstraintsTest extends AbstractValid
 		}
 	}
 	
-	protected void setAlgorithmSize(List<Algo> algorithms, String algorithm, String size) {
+	private void removeEncryptionAlgorithm(List<Algo> algorithms, String algorithmName, Integer keySize) {
+		Iterator<Algo> iterator = algorithms.iterator();
+		while(iterator.hasNext()) {
+			Algo algo = iterator.next();
+			if (algo.getValue().equals(algorithmName) && algo.getSize().equals(keySize)) {
+				iterator.remove();
+			}
+		}
+	}
+	
+	protected void setAlgorithmSize(List<Algo> algorithms, String algorithm, Integer size) {
 		for (Algo algo : algorithms) {
 			if (algo.getValue().equals(algorithm)) {
-				algo.setSize(BIT_SIZE_4096);
+				algo.setSize(4096);
 				return;
 			}
 		}

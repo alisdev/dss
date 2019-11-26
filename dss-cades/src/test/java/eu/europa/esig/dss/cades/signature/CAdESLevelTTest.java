@@ -20,16 +20,29 @@
  */
 package eu.europa.esig.dss.cades.signature;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
 import java.util.Date;
+import java.util.List;
 
 import org.junit.Before;
 
-import eu.europa.esig.dss.DSSDocument;
-import eu.europa.esig.dss.InMemoryDocument;
-import eu.europa.esig.dss.SignatureLevel;
-import eu.europa.esig.dss.SignaturePackaging;
 import eu.europa.esig.dss.cades.CAdESSignatureParameters;
+import eu.europa.esig.dss.diagnostic.DiagnosticData;
+import eu.europa.esig.dss.diagnostic.TimestampWrapper;
+import eu.europa.esig.dss.diagnostic.jaxb.XmlDigestMatcher;
+import eu.europa.esig.dss.enumerations.DigestAlgorithm;
+import eu.europa.esig.dss.enumerations.DigestMatcherType;
+import eu.europa.esig.dss.enumerations.EncryptionAlgorithm;
+import eu.europa.esig.dss.enumerations.SignatureLevel;
+import eu.europa.esig.dss.enumerations.SignaturePackaging;
+import eu.europa.esig.dss.model.DSSDocument;
+import eu.europa.esig.dss.model.InMemoryDocument;
 import eu.europa.esig.dss.signature.DocumentSignatureService;
+import eu.europa.esig.validationreport.jaxb.SignatureValidationReportType;
+import eu.europa.esig.validationreport.jaxb.ValidationReportType;
 
 public class CAdESLevelTTest extends AbstractCAdESTestSignature {
 
@@ -69,7 +82,36 @@ public class CAdESLevelTTest extends AbstractCAdESTestSignature {
 
 	@Override
 	protected String getSigningAlias() {
-		return GOOD_USER;
+		return GOOD_USER_WITH_PSEUDO;
+	}
+
+	@Override
+	protected void verifyETSIValidationReport(ValidationReportType etsiValidationReportJaxb) {
+		super.verifyETSIValidationReport(etsiValidationReportJaxb);
+
+		for (SignatureValidationReportType signatureValidationReport : etsiValidationReportJaxb.getSignatureValidationReport()) {
+			assertTrue(signatureValidationReport.getSignerInformation().isPseudonym());
+		}
+	}
+
+	@Override
+	protected void checkTimestamps(DiagnosticData diagnosticData) {
+		super.checkTimestamps(diagnosticData);
+
+		List<TimestampWrapper> timestampList = diagnosticData.getTimestampList();
+		assertEquals(1, timestampList.size());
+		TimestampWrapper timestampWrapper = timestampList.get(0);
+
+		List<XmlDigestMatcher> digestMatchers = timestampWrapper.getDigestMatchers();
+		assertEquals(1, digestMatchers.size());
+
+		XmlDigestMatcher xmlDigestMatcher = digestMatchers.get(0);
+		assertEquals(DigestMatcherType.MESSAGE_IMPRINT, xmlDigestMatcher.getType());
+		assertEquals(signatureParameters.getSignatureTimestampParameters().getDigestAlgorithm(), xmlDigestMatcher.getDigestMethod());
+
+		assertEquals(DigestAlgorithm.SHA256, timestampWrapper.getDigestAlgorithm());
+		assertEquals(EncryptionAlgorithm.RSA, timestampWrapper.getEncryptionAlgorithm());
+		assertNull(timestampWrapper.getMaskGenerationFunction());
 	}
 
 }
