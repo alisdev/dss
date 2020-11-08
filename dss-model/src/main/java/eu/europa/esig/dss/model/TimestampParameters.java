@@ -66,7 +66,7 @@ public class TimestampParameters implements Serializable {
     /**
      * Uses for transfering signatures timestaps
      */
-    private byte[] encodedBcTimeStampToken;
+    private byte[] encodedBcTimeStampToken; // alisdev
 
 	public DigestAlgorithm getDigestAlgorithm() {
 		return digestAlgorithm;
@@ -90,11 +90,11 @@ public class TimestampParameters implements Serializable {
 		this.canonicalizationMethod = canonicalizationMethod;
 	}
 
-    public byte[] getEncodedTimeStampToken() {
+    public byte[] getEncodedTimeStampToken() { // alisdev
         return encodedBcTimeStampToken;
     }
 
-    public void setEncodedTimeStampToken( byte[] encodedTimeStampToken ) {
+    public void setEncodedTimeStampToken( byte[] encodedTimeStampToken ) { // alisdev
         this.encodedBcTimeStampToken = encodedTimeStampToken;
     }
 

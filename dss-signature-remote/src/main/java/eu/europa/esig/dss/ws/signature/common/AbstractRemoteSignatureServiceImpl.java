@@ -30,20 +30,27 @@ import eu.europa.esig.dss.enumerations.ASiCContainerType;
 import eu.europa.esig.dss.enumerations.SignatureForm;
 import eu.europa.esig.dss.model.BLevelParameters;
 import eu.europa.esig.dss.model.DSSException;
+import eu.europa.esig.dss.model.InMemoryDocument;
+import eu.europa.esig.dss.model.MimeType;
 import eu.europa.esig.dss.model.Policy;
 import eu.europa.esig.dss.model.SignatureValue;
 import eu.europa.esig.dss.model.SignerLocation;
 import eu.europa.esig.dss.model.TimestampParameters;
 import eu.europa.esig.dss.model.x509.CertificateToken;
 import eu.europa.esig.dss.pades.PAdESSignatureParameters;
+import eu.europa.esig.dss.pades.SignatureImageParameters;
+import eu.europa.esig.dss.pades.SignatureImageTextParameters;
 import eu.europa.esig.dss.utils.Utils;
 import eu.europa.esig.dss.ws.converter.RemoteCertificateConverter;
 import eu.europa.esig.dss.ws.converter.RemoteDocumentConverter;
 import eu.europa.esig.dss.ws.dto.RemoteCertificate;
 import eu.europa.esig.dss.ws.dto.SignatureValueDTO;
 import eu.europa.esig.dss.ws.signature.dto.parameters.RemoteBLevelParameters;
+import eu.europa.esig.dss.ws.signature.dto.parameters.RemoteSignatureImageParameters;
+import eu.europa.esig.dss.ws.signature.dto.parameters.RemoteSignatureImageTextParameters;
 import eu.europa.esig.dss.ws.signature.dto.parameters.RemoteSignatureParameters;
 import eu.europa.esig.dss.ws.signature.dto.parameters.RemoteTimestampParameters;
+import eu.europa.esig.dss.ws.signature.dto.parameters.RemoteSignatureImageTextParameters.SignerPosition;
 import eu.europa.esig.dss.xades.XAdESSignatureParameters;
 
 public abstract class AbstractRemoteSignatureServiceImpl {
@@ -78,6 +85,7 @@ public abstract class AbstractRemoteSignatureServiceImpl {
 			case PAdES:
 				PAdESSignatureParameters padesParams = new PAdESSignatureParameters();
 				padesParams.setSignatureSize(9472 * 2); // double reserved space for signature
+				 fillPAdESVisibleSignatureParameters(padesParams, remoteParameters);
 				parameters = padesParams;
 				break;
 			case XAdES:
@@ -149,6 +157,7 @@ public abstract class AbstractRemoteSignatureServiceImpl {
 	
 	private TimestampParameters toTimestampParameters(RemoteTimestampParameters remoteTimestampParameters) {
 		TimestampParameters timestampParameters = new TimestampParameters();
+		timestampParameters.setEncodedTimeStampToken(remoteTimestampParameters.getEncodedTimeStampToken()); // alisdev
 		timestampParameters.setCanonicalizationMethod(remoteTimestampParameters.getCanonicalizationMethod());
 		timestampParameters.setDigestAlgorithm(remoteTimestampParameters.getDigestAlgorithm());
 		return timestampParameters;
@@ -157,5 +166,39 @@ public abstract class AbstractRemoteSignatureServiceImpl {
 	protected SignatureValue toSignatureValue(SignatureValueDTO signatureValueDTO) {
 		return new SignatureValue(signatureValueDTO.getAlgorithm(), signatureValueDTO.getValue());
 	}
+	
+    /**
+     * @author coufal - ALIS
+     * @param padesParams
+     * @param remoteParameters
+     */
+    private void fillPAdESVisibleSignatureParameters(PAdESSignatureParameters padesParams, RemoteSignatureParameters remoteParameters) {
+		RemoteSignatureImageParameters remoteImageParameters = remoteParameters.getImageParameters();
+		if (remoteImageParameters != null) {
+			SignatureImageParameters imageParameters = new SignatureImageParameters();
+			byte[] image = remoteImageParameters.getImage();
+			if (image != null) {
+				InMemoryDocument inMemoryDocument = new InMemoryDocument(image);
+				inMemoryDocument.setMimeType(MimeType.PNG);
+				imageParameters.setImage(inMemoryDocument);
+			}
+			Integer dpi = remoteImageParameters.getDpi();
+			imageParameters.setDpi(dpi != null ? dpi : 72);
+			imageParameters.setPage(remoteImageParameters.getPage());
+			imageParameters.setxAxis(remoteImageParameters.getxAxis());
+			imageParameters.setyAxis(remoteImageParameters.getyAxis());
+			imageParameters.setHeight((int) remoteImageParameters.getHeight());
+			imageParameters.setWidth((int) remoteImageParameters.getWidth());
+			imageParameters.setSignatureReason(remoteImageParameters.getSignatureReason());
+			imageParameters.setSignerLocation(remoteImageParameters.getSignerLocation());
+			RemoteSignatureImageTextParameters remoteTextParameters = remoteImageParameters.getTextParameters();
+			if (remoteTextParameters != null) {
+				SignatureImageTextParameters textParameters = new SignatureImageTextParameters();
+				textParameters.setText(remoteTextParameters.getText());
+				imageParameters.setTextParameters(textParameters);
+				padesParams.setSignatureImageParameters(imageParameters);
+			}
+		}
+    }
 
 }

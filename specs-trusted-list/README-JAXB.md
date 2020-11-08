@@ -1,0 +1,1 @@
+Pri problemech s nacitani xml, tak je potreba odstranit generovany package: eu.europa.esig.xmldsig.jaxb obsahuje chybnout ObjectFactory, pro info - sprvna je v specs-xmldsig

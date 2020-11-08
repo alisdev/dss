@@ -44,6 +44,11 @@ public class RemoteSignatureParameters implements Serializable {
 	 * The documents to be signed
 	 */
 	private List<RemoteDocument> detachedContents;
+	
+	/**
+     * This attribute is used to create visible signature in PAdES form
+     */
+    private RemoteSignatureImageParameters imageParameters;
 
 	/**
 	 * ASiC Container type
@@ -487,7 +492,21 @@ public class RemoteSignatureParameters implements Serializable {
 		} else if (!signatureTimestampParameters.equals(other.signatureTimestampParameters)) {
 			return false;
 		}
+		if (imageParameters == null) {
+			if (other.imageParameters != null) {
+				return false;
+			}
+		} else if (!imageParameters.equals(other.imageParameters)) {
+			return false;
+		}
 		return true;
 	}
+	
+    public RemoteSignatureImageParameters getImageParameters() {
+        return imageParameters;
+    }
 
+    public void setImageParameters( RemoteSignatureImageParameters imageParameters ) {
+        this.imageParameters = imageParameters;
+    }
 }

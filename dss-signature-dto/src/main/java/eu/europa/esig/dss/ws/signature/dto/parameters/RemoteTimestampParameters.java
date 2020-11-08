@@ -24,6 +24,11 @@ public class RemoteTimestampParameters implements Serializable {
 	 * independently of the surrounding XML, was created.
 	 */
 	private String canonicalizationMethod = CanonicalizationMethod.EXCLUSIVE;
+	
+    /**
+     * Uses for transfering signatures timestaps
+     */
+    private byte[] encodedBcTimeStampToken; //alisdev
 
 	public RemoteTimestampParameters() {
 	}
@@ -56,6 +61,14 @@ public class RemoteTimestampParameters implements Serializable {
 	public void setCanonicalizationMethod(final String canonicalizationMethod) {
 		this.canonicalizationMethod = canonicalizationMethod;
 	}
+	
+    public byte[] getEncodedTimeStampToken() { // alisdev
+        return encodedBcTimeStampToken;
+    }
+
+    public void setEncodedTimeStampToken( byte[] encodedTimeStampToken ) { //alisdev
+        this.encodedBcTimeStampToken = encodedTimeStampToken;
+    }
 
 	@Override
 	public int hashCode() {

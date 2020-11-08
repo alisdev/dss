@@ -403,6 +403,8 @@ class CRLParser {
 		// Loops because BufferedInputStream.skip only skips in its buffer
 		while (skipped < length) {
 			skipped += s.skip((long) length - skipped);
+			if(skipped == 0) // alisdev
+				break;
 		}
 	}
 
