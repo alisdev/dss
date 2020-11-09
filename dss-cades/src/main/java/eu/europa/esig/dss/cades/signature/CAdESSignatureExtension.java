@@ -36,7 +36,6 @@ import org.bouncycastle.cms.CMSException;
 import org.bouncycastle.cms.CMSSignedData;
 import org.bouncycastle.cms.SignerInformation;
 import org.bouncycastle.cms.SignerInformationStore;
-import org.bouncycastle.tsp.TimeStampToken;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,6 +47,7 @@ import eu.europa.esig.dss.enumerations.SignatureForm;
 import eu.europa.esig.dss.model.DSSDocument;
 import eu.europa.esig.dss.model.DSSException;
 import eu.europa.esig.dss.model.TimestampParameters;
+import eu.europa.esig.dss.model.TimestampBinary;
 import eu.europa.esig.dss.signature.SignatureExtension;
 import eu.europa.esig.dss.spi.DSSASN1Utils;
 import eu.europa.esig.dss.spi.DSSUtils;
@@ -122,11 +122,10 @@ abstract class CAdESSignatureExtension implements SignatureExtension<CAdESSignat
 		cmsSignedData = preExtendCMSSignedData(cmsSignedData, parameters);
 
 		Collection<SignerInformation> signerInformationCollection = cmsSignedData.getSignerInfos().getSigners();
-		final List<SignerInformation> newSignerInformationList = new ArrayList<SignerInformation>();
+		final List<SignerInformation> newSignerInformationList = new ArrayList<>();
 		
 		for (SignerInformation signerInformation : signerInformationCollection) {
-			final CAdESSignature cadesSignature = new CAdESSignature(cmsSignedData, signerInformation);
-			cadesSignature.setDetachedContents(parameters.getDetachedContents());
+			final CAdESSignature cadesSignature = newCAdESSignature(cmsSignedData, signerInformation, parameters.getDetachedContents());
 			assertSignatureValid(cadesSignature, parameters);
 			final SignerInformation newSignerInformation = extendCMSSignature(cmsSignedData, signerInformation, parameters);
 			newSignerInformationList.add(newSignerInformation);
@@ -156,13 +155,12 @@ abstract class CAdESSignatureExtension implements SignatureExtension<CAdESSignat
 
 		Collection<SignerInformation> signerInformationCollection = cmsSignedData.getSignerInfos().getSigners();
 		SignerInformation lastSignerInformation = getFirstSigner(cmsSignedData);
-		final List<SignerInformation> newSignerInformationList = new ArrayList<SignerInformation>();
+		final List<SignerInformation> newSignerInformationList = new ArrayList<>();
 		for (SignerInformation signerInformation : signerInformationCollection) {
 
 			if (lastSignerInformation == signerInformation) {
 
-				final CAdESSignature cadesSignature = new CAdESSignature(cmsSignedData, signerInformation);
-				cadesSignature.setDetachedContents(parameters.getDetachedContents());
+				final CAdESSignature cadesSignature = newCAdESSignature(cmsSignedData, signerInformation, parameters.getDetachedContents());
 				assertSignatureValid(cadesSignature, parameters);
 				final SignerInformation newSignerInformation = extendCMSSignature(cmsSignedData, signerInformation, parameters);
 				newSignerInformationList.add(newSignerInformation);
@@ -222,10 +220,31 @@ abstract class CAdESSignatureExtension implements SignatureExtension<CAdESSignat
 	 * @param detachedContents list of {@link DSSDocument}s
 	 * @return extended {@link CMSSignedData}
 	 */
-	public CMSSignedData postExtendCMSSignedData(CMSSignedData cmsSignedData, SignerInformation signerInformation, List<DSSDocument> detachedContents) {
+	protected CMSSignedData postExtendCMSSignedData(CMSSignedData cmsSignedData, SignerInformation signerInformation, List<DSSDocument> detachedContents) {
 		return cmsSignedData;
 	}
+	
+	/**
+	 * Creates a CAdESSignature.
+	 * Note: recommended method to use.
+	 * 
+	 * @param cmsSignedData {@link CMSSignedData} of a signature to create
+	 * @param signerInformation {@link SignerInformation}
+	 * @param detachedContents a list of detached {@link DSSDocument}s
+	 * @return created {@link CAdESSignature}
+	 */
+	protected CAdESSignature newCAdESSignature(CMSSignedData cmsSignedData, SignerInformation signerInformation, List<DSSDocument> detachedContents) {
+		final CAdESSignature cadesSignature = new CAdESSignature(cmsSignedData, signerInformation);
+		cadesSignature.setDetachedContents(detachedContents);
+		return cadesSignature;
+	}
 
+//  FIXME V rámci merge 5.7 jsem vynechal tuhle metodu protoze diky ni dochazelo k stackoverflow
+//	protected ASN1Object getTimeStampAttributeValue(byte[] message, CAdESSignatureParameters parameters) {
+//		final DigestAlgorithm timestampDigestAlgorithm = parameters.getSignatureTimestampParameters().getDigestAlgorithm();
+//		return getTimeStampAttributeValue(message, timestampDigestAlgorithm);
+//	}
+	
 	protected ASN1Object getTimeStampAttributeValue(final byte[] messageToTimestamp, CAdESSignatureParameters parameters, // alisdev
 			final Attribute... attributesForTimestampToken) {
 		try {
@@ -233,23 +252,17 @@ abstract class CAdESSignatureExtension implements SignatureExtension<CAdESSignat
 			final DigestAlgorithm timestampDigestAlgorithm = signatureTimestampParameters.getDigestAlgorithm();
 			byte[] encodedTimeStampToken = signatureTimestampParameters.getEncodedTimeStampToken();
 			if (encodedTimeStampToken == null) { // alisdev
+
 				if (LOG.isDebugEnabled()) {
 					LOG.debug("Message to timestamp is: {}", Utils.toHex(messageToTimestamp));
 				}
 				byte[] timestampDigest = DSSUtils.digest(timestampDigestAlgorithm, messageToTimestamp);
 				if (LOG.isDebugEnabled()) {
-					LOG.debug("Digested ({}) message to timestamp is {}", new Object[] { timestampDigestAlgorithm, Utils.toHex(timestampDigest) });
+					LOG.debug("Digested ({}) message to timestamp is {}", timestampDigestAlgorithm, Utils.toHex(timestampDigest));
 				}
-				final TimeStampToken timeStampToken = tspSource.getTimeStampResponse(timestampDigestAlgorithm, timestampDigest);
-
-				if (timeStampToken == null) {
-					throw new NullPointerException();
-				}
-				if (LOG.isDebugEnabled()) {
-					final byte[] messageImprintDigest = timeStampToken.getTimeStampInfo().getMessageImprintDigest();
-					LOG.debug("Digested ({}) message in timestamp is {}", new Object[] { timestampDigestAlgorithm, Utils.toHex(messageImprintDigest) });
-				}
-				encodedTimeStampToken = timeStampToken.getEncoded();
+				
+				final TimestampBinary timeStampToken = tspSource.getTimeStampResponse(timestampDigestAlgorithm, timestampDigest);
+				encodedTimeStampToken = timeStampToken.getBytes();
 			}
 
 			CMSSignedData cmsSignedDataTimeStampToken = new CMSSignedData(encodedTimeStampToken);
@@ -269,15 +282,15 @@ abstract class CAdESSignatureExtension implements SignatureExtension<CAdESSignat
 					unsignedAttributes = null;
 				}
 				final SignerInformation newSignerInformation = SignerInformation.replaceUnsignedAttributes(signerInformation, unsignedAttributes);
-				final List<SignerInformation> signerInformationList = new ArrayList<SignerInformation>();
+				final List<SignerInformation> signerInformationList = new ArrayList<>();
 				signerInformationList.add(newSignerInformation);
 				final SignerInformationStore newSignerStore = new SignerInformationStore(signerInformationList);
 				cmsSignedDataTimeStampToken = CMSSignedData.replaceSigners(cmsSignedDataTimeStampToken, newSignerStore);
 			}
 			final byte[] newTimeStampTokenBytes = cmsSignedDataTimeStampToken.getEncoded();
 			return DSSASN1Utils.toASN1Primitive(newTimeStampTokenBytes);
-		} catch (IOException | CMSException e ) {
-			throw new DSSException(e);
+		} catch (IOException | CMSException e) {
+			throw new DSSException("Cannot obtain timestamp attribute value.", e);
 		}
 
 	}

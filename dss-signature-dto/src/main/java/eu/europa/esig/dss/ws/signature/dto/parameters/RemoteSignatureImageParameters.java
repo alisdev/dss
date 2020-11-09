@@ -1,165 +1,215 @@
 /**
- * DSS - Digital Signature Services Copyright (C) 2015 European Commission, provided under the CEF
- * programme
- *
+ * DSS - Digital Signature Services
+ * Copyright (C) 2015 European Commission, provided under the CEF programme
+ * 
  * This file is part of the "DSS - Digital Signature Services" project.
- *
- * This library is free software; you can redistribute it and/or modify it under the terms of the
- * GNU Lesser General Public License as published by the Free Software Foundation; either version
- * 2.1 of the License, or (at your option) any later version.
- *
- * This library is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
- * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * 
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License along with this library;
- * if not, write to the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
- * 02110-1301 USA
+ * 
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 package eu.europa.esig.dss.ws.signature.dto.parameters;
 
 import java.io.Serializable;
+import java.util.Objects;
 
-/**
- * Parameters for a visible signature creation
- *
- */
+import eu.europa.esig.dss.enumerations.VisualSignatureAlignmentHorizontal;
+import eu.europa.esig.dss.enumerations.VisualSignatureAlignmentVertical;
+import eu.europa.esig.dss.enumerations.VisualSignatureRotation;
+import eu.europa.esig.dss.ws.dto.RemoteColor;
+import eu.europa.esig.dss.ws.dto.RemoteDocument;
+
 @SuppressWarnings("serial")
 public class RemoteSignatureImageParameters implements Serializable {
 
-    public static final int DEFAULT_PAGE = 1;
+	private VisualSignatureAlignmentHorizontal alignmentHorizontal;
 
-     /**
-     * This variable contains the image to use (company logo,...)
-     */
-     private byte[] image;
+	private VisualSignatureAlignmentVertical alignmentVertical;
 
-    /**
-     * This variable defines the page where the image will appear (1st page by default)
-     */
-    private int page = DEFAULT_PAGE;
+	private RemoteColor backgroundColor;
 
-    /**
-     * This variable defines the position of the image in the PDF page (X axis)
-     */
-    private float xAxis;
+    private Integer dpi;
 
-    /**
-     * This variable defines the position of the image in the PDF page (Y axis)
-     */
-    private float yAxis;
-    
-    /**
-     * This variable defines height of the image
-     */
-    private float height;
-    
-    /**
-     * This variable defines width of the image
-     */
-    private float width;
+    private Integer height;
 
-	/**
-	 * This variable defines the DPI of the image
-	 */
-	private Integer dpi;
-	
-    public Integer getDpi() {
-		return dpi;
-	}
+    private RemoteDocument image;
 
-	public void setDpi(Integer dpi) {
-		this.dpi = dpi;
-	}
+    private Integer page;
 
-	public float getHeight() {
-		return height;
-	}
+	private VisualSignatureRotation rotation;
 
-	public void setHeight(float height) {
-		this.height = height;
-	}
-
-	public float getWidth() {
-		return width;
-	}
-
-	public void setWidth(float width) {
-		this.width = width;
-	}
-	
-	
-	public float getWidht() {
-		return width;
-	}
-
-	public void setWidht(float widht) {
-		this.width = widht;
-	}
-
-	/**
-     * This variable is use to defines the text to generate on the image
-     */
     private RemoteSignatureImageTextParameters textParameters;
 
-     public byte[] getImage() {
-     return image;
-     }
-    
-     public void setImage( byte[] image ) {
-     this.image = image;
-     }
+    private Integer width;
 
-    private String signatureReason;
+    private Float xAxis;
 
-    private String signerLocation;
+    private Float yAxis;
 
-    public float getxAxis() {
-        return xAxis;
+    private Integer zoom;
+
+	public VisualSignatureAlignmentHorizontal getAlignmentHorizontal() {
+        return this.alignmentHorizontal;
     }
 
-    public void setxAxis( float xAxis ) {
-        this.xAxis = xAxis;
+	public void setAlignmentHorizontal(final VisualSignatureAlignmentHorizontal alignmentHorizontal) {
+        this.alignmentHorizontal = alignmentHorizontal;
     }
 
-    public float getyAxis() {
-        return yAxis;
+	public VisualSignatureAlignmentVertical getAlignmentVertical() {
+        return this.alignmentVertical;
     }
 
-    public void setyAxis( float yAxis ) {
-        this.yAxis = yAxis;
+	public void setAlignmentVertical(final VisualSignatureAlignmentVertical alignmentVertical) {
+        this.alignmentVertical = alignmentVertical;
     }
 
-    public int getPage() {
-        return page;
+	public RemoteColor getBackgroundColor() {
+        return this.backgroundColor;
     }
 
-    public void setPage( int page ) {
-        this.page = page;
+	public void setBackgroundColor(final RemoteColor backgroundColor) {
+        this.backgroundColor = backgroundColor;
+    }
+
+    public Integer getDpi() {
+        return this.dpi;
+    }
+
+    public void setDpi(final Integer dpi) {
+        this.dpi = dpi;
+    }
+
+    public Integer getHeight() {
+        return this.height;
+    }
+
+    public void setHeight(final Integer height) {
+        this.height = height;
+    }
+
+    public RemoteDocument getImage() {
+        return this.image;
+    }
+
+    public void setImage(final RemoteDocument image) {
+        this.image = image;
     }
 
     public RemoteSignatureImageTextParameters getTextParameters() {
-        return textParameters;
+        return this.textParameters;
     }
 
-    public void setTextParameters( RemoteSignatureImageTextParameters textParameters ) {
+    public void setTextParameters(final RemoteSignatureImageTextParameters textParameters) {
         this.textParameters = textParameters;
     }
 
-    public String getSignatureReason() {
-        return signatureReason;
+    public Integer getPage() {
+        return this.page;
     }
 
-    public void setSignatureReason( String signatureReason ) {
-        this.signatureReason = signatureReason;
+    public void setPage(final Integer page) {
+        this.page = page;
     }
 
-    public String getSignerLocation() {
-        return signerLocation;
+	public VisualSignatureRotation getRotation() {
+        return this.rotation;
     }
 
-    public void setSignerLocation( String signerLocation ) {
-        this.signerLocation = signerLocation;
+	public void setRotation(final VisualSignatureRotation rotation) {
+        this.rotation = rotation;
+    }
+
+    public Integer getWidth() {
+        return this.width;
+    }
+
+    public void setWidth(final Integer width) {
+        this.width = width;
+    }
+
+    public Float getxAxis() {
+        return this.xAxis;
+    }
+
+    public void setxAxis(final Float xAxis) {
+        this.xAxis = xAxis;
+    }
+
+    public Float getyAxis() {
+        return this.yAxis;
+    }
+
+    public void setyAxis(final Float yAxis) {
+        this.yAxis = yAxis;
+    }
+
+    public Integer getZoom() {
+        return this.zoom;
+    }
+
+    public void setZoom(final Integer zoom) {
+        this.zoom = zoom;
+    }
+
+    @Override
+    public boolean equals(final Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        final RemoteSignatureImageParameters that = (RemoteSignatureImageParameters) o;
+        return Objects.equals(alignmentHorizontal, that.alignmentHorizontal) &&
+                Objects.equals(alignmentVertical, that.alignmentVertical) &&
+				Objects.equals(backgroundColor, that.backgroundColor) &&
+                Objects.equals(dpi, that.dpi) &&
+                Objects.equals(height, that.height) &&
+                Objects.equals(image, that.image) &&
+                Objects.equals(page, that.page) &&
+                Objects.equals(rotation, that.rotation) &&
+                Objects.equals(textParameters, that.textParameters) &&
+                Objects.equals(width, that.width) &&
+                Objects.equals(xAxis, that.xAxis) &&
+                Objects.equals(yAxis, that.yAxis) &&
+                Objects.equals(zoom, that.zoom);
+    }
+
+    @Override
+    public int hashCode() {
+		return Objects.hash(alignmentHorizontal, alignmentVertical, dpi, height, image, page, rotation, textParameters, width, xAxis, yAxis, zoom,
+				backgroundColor);
+    }
+
+    @Override
+    public String toString() {
+        return "RemoteSignatureImageParameters{" +
+                "alignmentHorizontal='" + alignmentHorizontal + '\'' +
+                ", alignmentVertical='" + alignmentVertical + '\'' +
+				", backgroundColor=" + backgroundColor
+				+
+                ", dpi=" + dpi +
+                ", height=" + height +
+                ", image=" + image +
+                ", page=" + page +
+                ", rotation='" + rotation + '\'' +
+                ", textParameters=" + textParameters +
+                ", width=" + width +
+                ", xAxis=" + xAxis +
+                ", yAxis=" + yAxis +
+                ", zoom=" + zoom +
+                '}';
     }
 
 }
