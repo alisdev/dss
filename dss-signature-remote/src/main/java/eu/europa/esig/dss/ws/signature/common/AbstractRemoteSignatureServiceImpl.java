@@ -63,7 +63,6 @@ import eu.europa.esig.dss.ws.signature.dto.parameters.RemoteSignatureImageParame
 import eu.europa.esig.dss.ws.signature.dto.parameters.RemoteSignatureImageTextParameters;
 import eu.europa.esig.dss.ws.signature.dto.parameters.RemoteSignatureParameters;
 import eu.europa.esig.dss.ws.signature.dto.parameters.RemoteTimestampParameters;
-import eu.europa.esig.dss.ws.signature.dto.parameters.RemoteSignatureImageTextParameters.SignerPosition;
 import eu.europa.esig.dss.xades.XAdESSignatureParameters;
 import eu.europa.esig.dss.xades.XAdESTimestampParameters;
 
@@ -99,7 +98,7 @@ public abstract class AbstractRemoteSignatureServiceImpl {
 				break;
 			case PAdES:
 				PAdESSignatureParameters padesParams = new PAdESSignatureParameters();
-				padesParams.setSignatureSize(9472 * 2); // double reserved space for signature
+				padesParams.setContentSize(9472 * 2); // double reserved space for signature
 				fillPAdESVisibleSignatureParameters(padesParams, remoteParameters);
 				parameters = padesParams;
 				break;
@@ -254,7 +253,7 @@ public abstract class AbstractRemoteSignatureServiceImpl {
 		RemoteSignatureImageParameters remoteImageParameters = remoteParameters.getImageParameters();
 		if (remoteImageParameters != null) {
 			SignatureImageParameters imageParameters = new SignatureImageParameters();
-			byte[] image = remoteImageParameters.getImage();
+			byte[] image = remoteImageParameters.getImage().getBytes();
 			if (image != null) {
 				InMemoryDocument inMemoryDocument = new InMemoryDocument(image);
 				inMemoryDocument.setMimeType(MimeType.PNG);
@@ -274,7 +273,7 @@ public abstract class AbstractRemoteSignatureServiceImpl {
 				SignatureImageTextParameters textParameters = new SignatureImageTextParameters();
 				textParameters.setText(remoteTextParameters.getText());
 				imageParameters.setTextParameters(textParameters);
-				padesParams.setSignatureImageParameters(imageParameters);
+				padesParams.setImageParameters(imageParameters);
 			}
 		}
     }

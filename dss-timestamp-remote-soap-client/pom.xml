@@ -2,7 +2,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	
 	<parent>
-		<groupId>eu.europa.ec.joinup.sd-dss</groupId>
+		<groupId>cz.alis.forked.eu.europa.ec.joinup.sd-dss</groupId>
 		<artifactId>sd-dss</artifactId>
 		<version>5.7</version>
 	</parent>
@@ -16,7 +16,7 @@
 
 	<dependencies>
 		<dependency>
-			<groupId>eu.europa.ec.joinup.sd-dss</groupId>
+			<groupId>cz.alis.forked.eu.europa.ec.joinup.sd-dss</groupId>
 			<artifactId>dss-timestamp-dto</artifactId>
 		</dependency>
 		<dependency>

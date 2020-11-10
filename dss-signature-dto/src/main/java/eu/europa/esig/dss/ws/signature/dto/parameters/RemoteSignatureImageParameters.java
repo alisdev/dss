@@ -57,6 +57,10 @@ public class RemoteSignatureImageParameters implements Serializable {
     private Float yAxis;
 
     private Integer zoom;
+    
+    private String signatureReason; //alisdev
+
+    private String signerLocation; //alisdev
 
 	public VisualSignatureAlignmentHorizontal getAlignmentHorizontal() {
         return this.alignmentHorizontal;
@@ -161,6 +165,23 @@ public class RemoteSignatureImageParameters implements Serializable {
     public void setZoom(final Integer zoom) {
         this.zoom = zoom;
     }
+    // alisdev
+    public String getSignatureReason() {
+        return signatureReason;
+    }
+
+    public void setSignatureReason( String signatureReason ) {
+        this.signatureReason = signatureReason;
+    }
+
+    public String getSignerLocation() {
+        return signerLocation;
+    }
+
+    public void setSignerLocation( String signerLocation ) {
+        this.signerLocation = signerLocation;
+    }
+    // alisdev
 
     @Override
     public boolean equals(final Object o) {

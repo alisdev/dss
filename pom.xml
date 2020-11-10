@@ -86,6 +86,8 @@
 	
 	<modules>
 	
+		<module>dss-compatibility</module>
+		
 		<module>dss-enumerations</module>
 		<module>dss-alert</module>
 		<module>dss-jaxb-parsers</module>
@@ -774,7 +776,7 @@
 				<version>${project.version}</version>
 			</dependency>
 			<dependency>
-				<groupId>eu.europa.ec.joinup.sd-dss</groupId>
+				<groupId>cz.alis.forked.eu.europa.ec.joinup.sd-dss</groupId>
 				<artifactId>dss-jaxb-parsers</artifactId>
 				<version>${project.version}</version>
 			</dependency>
