@@ -71,15 +71,15 @@ class PAdESLevelBaselineLT extends PAdESLevelBaselineT {
 		if (Utils.isCollectionEmpty(signatures)) {
 			throw new DSSException("No signature to be extended");
 		}
-
-		for (final AdvancedSignature signature : signatures) {
-			if (isRequireDocumentTimestamp(signature)) {
-				// extend to T-level
-				document = super.extendSignatures(document, parameters);
-				pdfDocumentValidator = getPDFDocumentValidator(document, parameters);
-				break;
-			}
-		}
+// alisdev - SSLJDR-2295
+//		for (final AdvancedSignature signature : signatures) {
+//			if (isRequireDocumentTimestamp(signature)) {
+//				// extend to T-level
+//				document = super.extendSignatures(document, parameters);
+//				pdfDocumentValidator = getPDFDocumentValidator(document, parameters);
+//				break;
+//			}
+//		}
 
 		signatures = pdfDocumentValidator.getSignatures();
 
