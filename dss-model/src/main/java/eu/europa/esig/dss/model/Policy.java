@@ -38,7 +38,7 @@ public class Policy implements Serializable {
 	private ObjectIdentifierQualifier qualifier;
 
 	private String description;
-	
+
 	/* Used in XAdES */
 	private String[] documentationReferences;
 
@@ -248,8 +248,26 @@ public class Policy implements Serializable {
 
 	@Override
 	public String toString() {
-		return "Policy [id=" + id + ", description=" + description + ", digestAlgorithm=" + digestAlgorithm + ", digestValue=" + Arrays.toString(digestValue)
-				+ ", spuri=" + spuri + ", documentationReferences=" + Arrays.toString(documentationReferences) + "]";
+		return "Policy [id=" + id + ", description=" + description + ", digestAlgorithm=" + digestAlgorithm
+				+ ", digestValue=" + Arrays.toString(digestValue) + ", spuri=" + spuri + ", documentationReferences="
+				+ Arrays.toString(documentationReferences) + "]";
 	}
 
+	public boolean isEmpty() {// alisdev - Coufal metoda podle SignerLocation
+		if (id != null)
+			return false;
+		if (qualifier != null)
+			return false;
+		if (description != null)
+			return false;
+		if (documentationReferences != null)
+			return false;
+		if (digestAlgorithm != null)
+			return false;
+		if (digestValue != null)
+			return false;
+		if (spuri != null)
+			return false;
+		return true;
+	}
 }

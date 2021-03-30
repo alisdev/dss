@@ -168,7 +168,9 @@ public abstract class AbstractRemoteSignatureServiceImpl {
 		policy.setId(remoteBLevelParameters.getPolicyId());
 		policy.setQualifier(remoteBLevelParameters.getPolicyQualifier());
 		policy.setSpuri(remoteBLevelParameters.getPolicySpuri());
-		bLevelParameters.setSignaturePolicy(policy);
+		if (!policy.isEmpty()) { // alisdev - Coufal
+			bLevelParameters.setSignaturePolicy(policy);
+		}
 		
 		SignerLocation signerLocation = new SignerLocation();
 		signerLocation.setCountry(remoteBLevelParameters.getSignerLocationCountry());
