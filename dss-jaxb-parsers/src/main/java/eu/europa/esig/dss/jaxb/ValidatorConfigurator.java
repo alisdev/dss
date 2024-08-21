@@ -25,7 +25,15 @@ import java.util.Objects;
 import javax.xml.XMLConstants;
 import javax.xml.validation.Validator;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import eu.europa.esig.dss.jaxb.parsers.DateParser;
+
 public class ValidatorConfigurator extends AbstractFactoryBuilder<Validator> {
+	
+	// alisdev - added try catch for support evn with loaded xcercesImpl
+	private static final Logger LOG = LoggerFactory.getLogger(DateParser.class);
 	
 	private ValidatorConfigurator() {
 		// The configuration protects against XXE
@@ -76,12 +84,20 @@ public class ValidatorConfigurator extends AbstractFactoryBuilder<Validator> {
 
 	@Override
 	protected void setSecurityFeature(Validator validator, String feature, Boolean value) throws Exception {
-		validator.setFeature(feature, value);
+		try { // alisdev
+			validator.setFeature(feature, value);
+		} catch (Exception e) {
+			LOG.trace("", e);
+		}
 	}
 
 	@Override
 	protected void setSecurityAttribute(Validator validator, String attribute, Object value) throws Exception {
-		validator.setProperty(attribute, value);
+		try { // alisdev
+			validator.setProperty(attribute, value);
+		} catch (Exception e) {
+			LOG.trace("", e);
+		}
 	}
 
 }

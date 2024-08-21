@@ -69,7 +69,8 @@ public class PdfSignatureDictionaryComparator implements Comparator<PdfSignature
             LOG.warn("More than one signature with the same byte range !");
             return o1.getSigningDate().compareTo(o2.getSigningDate());
 		} else {
-			throw new DSSException("Strange byte ranges (ByteRange : " + byteRange1 + " / ByteRange : " + byteRange2 + ")");
+			LOG.warn("Strange byte ranges (ByteRange : " + byteRange1 + " / ByteRange : " + byteRange2 + ")");
+			return o1.getSigningDate().compareTo(o2.getSigningDate());
 		}
 	}
 

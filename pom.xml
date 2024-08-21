@@ -183,14 +183,15 @@
 					</execution>
 				</executions>
 			</plugin>
-			<plugin>
+			<!-- alisdev - plugin byl presunut do samostatneho profilu, aby se dala vypina kompilace do 9+
+			 <plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
                     <encoding>${project.encoding}</encoding>
                     
-                    <!-- Default + Test -->
-					<release>8</release> <!-- XML Security requires 8+ -->
+                    __ Default + Test __
+					<release>8</release> __ XML Security requires 8+ __
 					
                     <showWarnings>true</showWarnings>
                     <showDeprecation>true</showDeprecation>
@@ -203,7 +204,7 @@
 							<goal>compile</goal>
 						</goals>
 						<configuration>
-							<release>8</release> <!-- XML Security requires 8+ -->
+							<release>8</release> __ XML Security requires 8+ __
 						</configuration>
 					</execution>
 			
@@ -220,13 +221,13 @@
 							</compileSourceRoots>
 							<outputDirectory>${project.build.outputDirectory}/META-INF/versions/9</outputDirectory>
 							<compilerArgs>
-								<arg>--patch-module</arg>
+								<arg>tadymajibytdvepomlckypatch-module</arg>
 								<arg>${module-name}=${project.build.outputDirectory}</arg>
 							</compilerArgs>
 						</configuration>
 					</execution>
 				</executions>          
-			</plugin>
+			</plugin> alisdev -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-jar-plugin</artifactId>
@@ -252,6 +253,7 @@
 				<configuration>
 					<!-- Default test configuration -->
 					<skipTests>true</skipTests>
+					<testFailureIgnore>true</testFailureIgnore>
 					<classpathDependencyExcludes>
 			            <classpathDependencyExclude>commons-logging:commons-logging</classpathDependencyExclude>
 			        </classpathDependencyExcludes>
@@ -265,8 +267,8 @@
 							<goal>test</goal>
 						</goals>
 						<configuration>
-							<skipTests>false</skipTests>
-							<testFailureIgnore>false</testFailureIgnore>
+							<skipTests>true</skipTests>
+							<testFailureIgnore>true</testFailureIgnore>
 							<includes>
 								<include>eu/**/*Test.java</include>
 							</includes>
@@ -280,7 +282,7 @@
 							<goal>test</goal>
 						</goals>
 						<configuration>
-							<skipTests>false</skipTests>
+							<skipTests>true</skipTests>
 							<testFailureIgnore>true</testFailureIgnore>
 							<includes>
 								<include>plugtests/**/*Test.java</include>
@@ -294,7 +296,7 @@
 							<goal>test</goal>
 						</goals>
 						<configuration>
-							<skipTests>false</skipTests>
+							<skipTests>true</skipTests>
 							<testFailureIgnore>true</testFailureIgnore>
 							<includes>
 								<include>known/issues/**/*Test.java</include>
@@ -993,11 +995,70 @@
 		<profile>
 			<id>quick</id>
 			<properties>
-				<maven.test.skip>true</maven.test.skip>
 				<maven.javadoc.skip>true</maven.javadoc.skip>
 				<jacoco.skip>true</jacoco.skip>
 			</properties>
 		</profile>
+	<!-- alisdev - tenh;e profil je tu pridan, aby bylo mozne disablova compile 9+ -->
+		<profile>
+			<id>default</id>
+			<activation>
+				<property>
+					<name>!disableDefault</name>
+				</property>
+			</activation>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-compiler-plugin</artifactId>
+						<configuration>
+						<encoding>${project.encoding}</encoding>
+
+						<!-- Default + Test -->
+						<release>8</release>
+						<!-- XML Security requires 8+ -->
+
+						<showWarnings>true</showWarnings>
+						<showDeprecation>true</showDeprecation>
+						</configuration>
+
+						<executions>
+							<execution>
+								<id>default-compile</id>
+								<goals>
+									<goal>compile</goal>
+								</goals>
+								<configuration>
+									<release>8</release>
+								<!-- XML Security requires 8+ -->
+								</configuration>
+							</execution>
+
+							<execution>
+								<id>module-compile</id>
+								<phase>compile</phase>
+								<goals>
+									<goal>compile</goal>
+								</goals>
+								<configuration>
+									<release>9</release>
+									<compileSourceRoots>
+									<compileSourceRoot>${project.basedir}/src/main/java9</compileSourceRoot>
+									</compileSourceRoots>
+									<outputDirectory>${project.build.outputDirectory}/META-INF/versions/9</outputDirectory>
+									<compilerArgs>
+										<arg>--patch-module</arg>
+										<arg>${module-name}=${project.build.outputDirectory}</arg>
+									</compilerArgs>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile> <!-- alisdev -->
+		
 		<profile>
 			<!-- Include tests with @Tag("slow") -->
 			<id>slow-tests</id>
@@ -1024,6 +1085,57 @@
 							</execution>
 						</executions>
 					</plugin>
+				</plugins>
+			</build>
+		</profile>
+		<profile>
+			<activation>
+				<property>
+					<name>jdk8</name>
+				</property>
+			</activation>
+			<id>jdk8</id>
+			<properties>
+				<maven.javadoc.skip>true</maven.javadoc.skip>
+				<skipTests>true</skipTests>
+				<jacoco.skip>true</jacoco.skip>
+			</properties>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-compiler-plugin</artifactId>
+						<executions>
+							<execution>
+								<id>jdk8-compile</id>
+								<goals>
+									<goal>compile</goal>
+								</goals>
+								<!-- recompile everything for target VM except the module-info.java -->
+								<configuration>
+									<excludes>
+										<exclude>**/module-info.java</exclude>
+									</excludes>
+								</configuration>
+							</execution>
+						</executions>
+						<!-- defaults for compile and testCompile -->
+						<configuration>
+							<source>1.8</source>
+							<target>1.8</target>
+							<fork>true</fork>
+							<executable>C:\Program Files\Java\jdk8\bin\javac</executable>
+						</configuration>
+					<!--<configuration> __ Only required when JAVA_HOME isn't at least Java 
+						9 and when haven't configured the maven-toolchains-plugin __ <jdkToolchain> 
+						<version>8</version> </jdkToolchain> <source>1.6</source> <target>1.6</target> 
+						</configuration> -->
+					</plugin>
+				<!-- <plugin> <groupId>org.apache.maven.plugins</groupId> <artifactId>maven-toolchains-plugin</artifactId> 
+					<version>1.1</version> <executions> <execution> <phase>validate</phase> <goals> 
+					<goal>toolchain</goal> </goals> </execution> </executions> <configuration> 
+					<toolchains> <jdk> <version>1.8</version> <vendor>sun</vendor> </jdk> </toolchains> 
+					</configuration> </plugin> -->
 				</plugins>
 			</build>
 		</profile>

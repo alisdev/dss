@@ -24,7 +24,15 @@ import javax.xml.XMLConstants;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.validation.SchemaFactory;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import eu.europa.esig.dss.jaxb.parsers.DateParser;
+
 public class SchemaFactoryBuilder extends AbstractFactoryBuilder<SchemaFactory> {
+	
+	// alisdev - added try catch for support evn with loaded xcercesImpl
+	private static final Logger LOG = LoggerFactory.getLogger(DateParser.class);
 	
 	private String schemaLanguage = XMLConstants.W3C_XML_SCHEMA_NS_URI;
 	
@@ -86,12 +94,20 @@ public class SchemaFactoryBuilder extends AbstractFactoryBuilder<SchemaFactory> 
 
 	@Override
 	protected void setSecurityFeature(SchemaFactory factory, String feature, Boolean value) throws Exception {
-		factory.setFeature(feature, value);
+		try { // alisdev
+			factory.setFeature(feature, value);
+		} catch (Exception e) {
+			LOG.trace("", e);
+		}
 	}
 
 	@Override
 	protected void setSecurityAttribute(SchemaFactory factory, String attribute, Object value) throws Exception {
-		factory.setProperty(attribute, value);
+		try { // alisdev
+			factory.setProperty(attribute, value);
+		} catch (Exception e) {
+			LOG.trace("", e);
+		}
 	}
 
 }

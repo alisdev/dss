@@ -117,23 +117,23 @@ public class PdfBoxSignatureService extends AbstractPDFSignatureService {
 	@Override
 	protected void checkDocumentPermissions(final DSSDocument document, final String pwd) {
 		try (InputStream is = document.openStream(); PDDocument pdDocument = PDDocument.load(is, pwd)) {
-
-			AccessPermission accessPermission = pdDocument.getCurrentAccessPermission();
-			if (accessPermission.isReadOnly()) {
-				throw new ProtectedDocumentException("The document cannot be modified (read-only)");
-			}
-
-			if (!accessPermission.canModify()) {
-				throw new ProtectedDocumentException("Cannot modify the document");
-			}
-
-			if (!accessPermission.canModifyAnnotations()) {
-				throw new ProtectedDocumentException("Cannot modify the annotation");
-			}
-
-			if (!accessPermission.canFillInForm()) {
-				throw new ProtectedDocumentException("Cannot fill in form");
-			}
+//			SSLJDR-2299 - alisdev
+//			AccessPermission accessPermission = pdDocument.getCurrentAccessPermission();
+//			if (accessPermission.isReadOnly()) {
+//				throw new ProtectedDocumentException("The document cannot be modified (read-only)");
+//			}
+//
+//			if (!accessPermission.canModify()) {
+//				throw new ProtectedDocumentException("Cannot modify the document");
+//			}
+//
+//			if (!accessPermission.canModifyAnnotations()) {
+//				throw new ProtectedDocumentException("Cannot modify the annotation");
+//			}
+//
+//			if (!accessPermission.canFillInForm()) {
+//				throw new ProtectedDocumentException("Cannot fill in form");
+//			}
 			
 		} catch (InvalidPasswordException e) {
 			throw new eu.europa.esig.dss.pades.exception.InvalidPasswordException("The document is encrypted (password is invalid)");

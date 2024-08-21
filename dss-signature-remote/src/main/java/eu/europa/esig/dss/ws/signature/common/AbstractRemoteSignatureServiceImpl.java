@@ -270,6 +270,7 @@ public abstract class AbstractRemoteSignatureServiceImpl {
 			imageParameters.setWidth((int) remoteImageParameters.getWidth());
 			imageParameters.setSignatureReason(remoteImageParameters.getSignatureReason());
 			imageParameters.setSignerLocation(remoteImageParameters.getSignerLocation());
+			imageParameters.setRotation(remoteImageParameters.getRotation());
 			RemoteSignatureImageTextParameters remoteTextParameters = remoteImageParameters.getTextParameters();
 			if (remoteTextParameters != null) {
 				SignatureImageTextParameters textParameters = new SignatureImageTextParameters();

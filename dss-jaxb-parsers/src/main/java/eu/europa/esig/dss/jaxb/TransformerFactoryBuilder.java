@@ -23,23 +23,32 @@ package eu.europa.esig.dss.jaxb;
 import javax.xml.XMLConstants;
 import javax.xml.transform.TransformerFactory;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import eu.europa.esig.dss.jaxb.parsers.DateParser;
+
 public class TransformerFactoryBuilder extends AbstractFactoryBuilder<TransformerFactory> {
 	
+	// alisdev - added try catch for support evn with loaded xcercesImpl
+	private static final Logger LOG = LoggerFactory.getLogger(DateParser.class);
+
 	private TransformerFactoryBuilder() {
 		enableFeature(XMLConstants.FEATURE_SECURE_PROCESSING);
 		setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
 		setAttribute(XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "");
 	}
-	
+
 	/**
-	 * Instantiates a pre-configured with security features {@code TransformerFactoryBuilder}
+	 * Instantiates a pre-configured with security features
+	 * {@code TransformerFactoryBuilder}
 	 * 
 	 * @return default {@link TransformerFactoryBuilder}
 	 */
 	public static TransformerFactoryBuilder getSecureTransformerBuilder() {
 		return new TransformerFactoryBuilder();
 	}
-	
+
 	/**
 	 * Builds the configured {@code TransformerFactory}
 	 * 
@@ -51,22 +60,22 @@ public class TransformerFactoryBuilder extends AbstractFactoryBuilder<Transforme
 		setSecurityAttributes(transformerFactory);
 		return transformerFactory;
 	}
-	
+
 	@Override
 	public TransformerFactoryBuilder enableFeature(String feature) {
 		return (TransformerFactoryBuilder) super.enableFeature(feature);
 	}
-	
+
 	@Override
 	public TransformerFactoryBuilder disableFeature(String feature) {
 		return (TransformerFactoryBuilder) super.disableFeature(feature);
 	}
-	
+
 	@Override
 	public TransformerFactoryBuilder setAttribute(String attribute, Object value) {
 		return (TransformerFactoryBuilder) super.setAttribute(attribute, value);
 	}
-	
+
 	@Override
 	public TransformerFactoryBuilder removeAttribute(String attribute) {
 		return (TransformerFactoryBuilder) super.removeAttribute(attribute);
@@ -74,12 +83,21 @@ public class TransformerFactoryBuilder extends AbstractFactoryBuilder<Transforme
 
 	@Override
 	protected void setSecurityFeature(TransformerFactory factory, String feature, Boolean value) throws Exception {
-		factory.setFeature(feature, value);
+		try { // alisdev
+			factory.setFeature(feature, value);
+		} catch (Exception e) {
+			LOG.trace("", e);
+		}
 	}
 
 	@Override
-	protected void setSecurityAttribute(TransformerFactory factory, String attribute, Object value) throws IllegalArgumentException {
-		factory.setAttribute(attribute, value);
+	protected void setSecurityAttribute(TransformerFactory factory, String attribute, Object value)
+			throws IllegalArgumentException {
+		try { // alisdev
+			factory.setAttribute(attribute, value);
+		} catch (Exception e) {
+			LOG.trace("", e);
+		}
 	}
 
 }
