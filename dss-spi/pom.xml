@@ -4,7 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<parent>
-		<groupId>eu.europa.ec.joinup.sd-dss</groupId>
+		<groupId>cz.alis.forked.sd-dss</groupId>
 		<artifactId>sd-dss</artifactId>
 		<version>6.1.RC1</version>
 	</parent>
@@ -19,19 +19,19 @@
 	
 	<dependencies>
 		<dependency>
-			<groupId>eu.europa.ec.joinup.sd-dss</groupId>
+			<groupId>cz.alis.forked.sd-dss</groupId>
 			<artifactId>dss-model</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>eu.europa.ec.joinup.sd-dss</groupId>
+			<groupId>cz.alis.forked.sd-dss</groupId>
 			<artifactId>dss-alert</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>eu.europa.ec.joinup.sd-dss</groupId>
+			<groupId>cz.alis.forked.sd-dss</groupId>
 			<artifactId>dss-utils</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>eu.europa.ec.joinup.sd-dss</groupId>
+			<groupId>cz.alis.forked.sd-dss</groupId>
 			<artifactId>dss-crl-parser</artifactId>
 		</dependency>
 
@@ -61,12 +61,12 @@
 		    <scope>test</scope>
 		</dependency>
 		<dependency>
-			<groupId>eu.europa.ec.joinup.sd-dss</groupId>
+			<groupId>cz.alis.forked.sd-dss</groupId>
 			<artifactId>dss-utils-apache-commons</artifactId>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
-			<groupId>eu.europa.ec.joinup.sd-dss</groupId>
+			<groupId>cz.alis.forked.sd-dss</groupId>
 			<artifactId>dss-crl-parser-x509crl</artifactId>
 			<scope>test</scope>
 		</dependency>
