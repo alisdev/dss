@@ -23,10 +23,12 @@ package eu.europa.esig.dss.ws.signature.dto.parameters;
 import eu.europa.esig.dss.enumerations.ImageScaling;
 import eu.europa.esig.dss.enumerations.VisualSignatureAlignmentHorizontal;
 import eu.europa.esig.dss.enumerations.VisualSignatureAlignmentVertical;
+import eu.europa.esig.dss.enumerations.VisualSignatureRotation;
 import eu.europa.esig.dss.ws.dto.RemoteColor;
 import eu.europa.esig.dss.ws.dto.RemoteDocument;
 
 import java.io.Serializable;
+import java.util.Objects;
 
 /**
  * The parameters to be used for a PDF visual signature creation
@@ -61,6 +63,88 @@ public class RemoteSignatureImageParameters implements Serializable {
 
     /** The visual signature zoom */
     private Integer zoom;
+
+	// BEGIN ALISDEV - zpetna kompatibilita s 5.7
+	private Integer height; //alisdev
+
+	private Integer page; //alisdev
+
+	private VisualSignatureRotation rotation; //alisdev
+
+	private Integer width; //alisdev
+
+	private Float xAxis; //alisdev
+
+	private Float yAxis; //alisdev
+
+	private String signatureReason; //alisdev
+
+	private String signerLocation; //alisdev
+	// END ALISDEV - zpetna kompatibilita s 5.7
+
+	public Integer getHeight() {
+		return height;
+	}
+
+	public void setHeight(Integer height) {
+		this.height = height;
+	}
+
+	public Integer getPage() {
+		return page;
+	}
+
+	public void setPage(Integer page) {
+		this.page = page;
+	}
+
+	public VisualSignatureRotation getRotation() {
+		return rotation;
+	}
+
+	public void setRotation(VisualSignatureRotation rotation) {
+		this.rotation = rotation;
+	}
+
+	public Integer getWidth() {
+		return width;
+	}
+
+	public void setWidth(Integer width) {
+		this.width = width;
+	}
+
+	public Float getxAxis() {
+		return xAxis;
+	}
+
+	public void setxAxis(Float xAxis) {
+		this.xAxis = xAxis;
+	}
+
+	public Float getyAxis() {
+		return yAxis;
+	}
+
+	public void setyAxis(Float yAxis) {
+		this.yAxis = yAxis;
+	}
+
+	public String getSignatureReason() {
+		return signatureReason;
+	}
+
+	public void setSignatureReason(String signatureReason) {
+		this.signatureReason = signatureReason;
+	}
+
+	public String getSignerLocation() {
+		return signerLocation;
+	}
+
+	public void setSignerLocation(String signerLocation) {
+		this.signerLocation = signerLocation;
+	}
 
 	/**
 	 * Default constructor instantiating object with null values
@@ -231,6 +315,32 @@ public class RemoteSignatureImageParameters implements Serializable {
         this.zoom = zoom;
     }
 
+//	@Override
+//	public boolean equals(Object o) {
+//		if (this == o) return true;
+//		if (o == null || getClass() != o.getClass()) return false;
+//
+//		RemoteSignatureImageParameters that = (RemoteSignatureImageParameters) o;
+//
+//		if (alignmentHorizontal != that.alignmentHorizontal) return false;
+//		if (alignmentVertical != that.alignmentVertical) return false;
+//		if (imageScaling != that.imageScaling) return false;
+//		if (!Objects.equals(backgroundColor, that.backgroundColor)) return false;
+//		if (!Objects.equals(dpi, that.dpi)) return false;
+//		if (!Objects.equals(image, that.image)) return false;
+//		if (!Objects.equals(fieldParameters, that.fieldParameters)) return false;
+//		if (!Objects.equals(textParameters, that.textParameters)) return false;
+//		if (!Objects.equals(zoom, that.zoom)) return false;
+//		if (!Objects.equals(height, that.height)) return false;
+//		if (!Objects.equals(page, that.page)) return false;
+//		if (rotation != that.rotation) return false;
+//		if (!Objects.equals(width, that.width)) return false;
+//		if (!Objects.equals(xAxis, that.xAxis)) return false;
+//		if (!Objects.equals(yAxis, that.yAxis)) return false;
+//		if (!Objects.equals(signatureReason, that.signatureReason)) return false;
+//		return Objects.equals(signerLocation, that.signerLocation);
+//	}
+
 	@Override
 	public int hashCode() {
 		final int prime = 31;
@@ -243,6 +353,17 @@ public class RemoteSignatureImageParameters implements Serializable {
 		result = prime * result + ((image == null) ? 0 : image.hashCode());
 		result = prime * result + ((textParameters == null) ? 0 : textParameters.hashCode());
 		result = prime * result + ((zoom == null) ? 0 : zoom.hashCode());
+		// BGIN ALISDEV
+		result = prime * result + ((height == null) ? 0 : height.hashCode()); // alisdev
+		result = prime * result + ((page == null) ? 0 : page.hashCode()); // alisdev
+		result = prime * result + ((page == null) ? 0 : page.hashCode()); // alisdev
+		result = prime * result + ((rotation == null) ? 0 : rotation.hashCode()); // alisdev
+		result = prime * result + ((width == null) ? 0 : width.hashCode()); // alisdev
+		result = prime * result + ((xAxis == null) ? 0 : xAxis.hashCode()); // alisdev
+		result = prime * result + ((yAxis == null) ? 0 : yAxis.hashCode()); // alisdev
+		result = prime * result + ((signatureReason == null) ? 0 : signatureReason.hashCode()); // alisdev
+		result = prime * result + ((signerLocation == null) ? 0 : signerLocation.hashCode()); // alisdev
+		// END ALISDEV
 		return result;
 	}
 
@@ -306,6 +427,18 @@ public class RemoteSignatureImageParameters implements Serializable {
 		} else if (!zoom.equals(other.zoom)) {
 			return false;
 		}
+
+		// BEGIN ALISDEV
+		if (!Objects.equals(height, other.height)) return false;
+		if (!Objects.equals(page, other.page)) return false;
+		if (rotation != other.rotation) return false;
+		if (!Objects.equals(width, other.width)) return false;
+		if (!Objects.equals(xAxis, other.xAxis)) return false;
+		if (!Objects.equals(yAxis, other.yAxis)) return false;
+		if (!Objects.equals(signatureReason, other.signatureReason)) return false;
+		if (!Objects.equals(signerLocation, other.signerLocation)) return false;
+		// END ALISDEV
+
 		return true;
 	}
 

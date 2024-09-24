@@ -30,6 +30,7 @@ import eu.europa.esig.dss.cades.signature.CAdESTimestampParameters;
 import eu.europa.esig.dss.enumerations.ASiCContainerType;
 import eu.europa.esig.dss.enumerations.CommitmentType;
 import eu.europa.esig.dss.enumerations.CommitmentTypeEnum;
+import eu.europa.esig.dss.enumerations.MimeTypeEnum;
 import eu.europa.esig.dss.enumerations.SignatureForm;
 import eu.europa.esig.dss.enumerations.TimestampContainerForm;
 import eu.europa.esig.dss.jades.JAdESTimestampParameters;
@@ -170,7 +171,8 @@ public abstract class AbstractRemoteSignatureServiceImpl {
 	protected SerializableSignatureParameters getPAdESSignatureParameters(RemoteSignatureParameters remoteParameters) {
 		PAdESSignatureParameters padesParams = new PAdESSignatureParameters();
 		padesParams.setContentSize(9472 * 2); // double reserved space for signature
-		padesParams.setImageParameters(toImageParameters(remoteParameters.getImageParameters()));
+		// padesParams.setImageParameters(toImageParameters(remoteParameters.getImageParameters())); //ALISDEV puvodni metoda narazena - fillPAdESVisibleSignatureParameters
+		fillPAdESVisibleSignatureParameters(padesParams, remoteParameters); //ALISDEV
 		return padesParams;
 	}
 	
@@ -539,5 +541,40 @@ public abstract class AbstractRemoteSignatureServiceImpl {
 		}
 	}
 
-
+	/**
+	 * @author coufal - ALIS
+	 * @param padesParams
+	 * @param remoteParameters
+	 */
+	private void fillPAdESVisibleSignatureParameters(PAdESSignatureParameters padesParams, RemoteSignatureParameters remoteParameters) {
+		RemoteSignatureImageParameters remoteImageParameters = remoteParameters.getImageParameters();
+		if (remoteImageParameters != null) {
+			SignatureImageParameters imageParameters = new SignatureImageParameters();
+			byte[] image = remoteImageParameters.getImage().getBytes();
+			if (image != null) {
+				InMemoryDocument inMemoryDocument = new InMemoryDocument(image);
+				inMemoryDocument.setMimeType(MimeTypeEnum.PNG);
+				imageParameters.setImage(inMemoryDocument);
+			}
+			Integer dpi = remoteImageParameters.getDpi();
+			imageParameters.setDpi(dpi != null ? dpi : 72);
+			SignatureFieldParameters signatureFieldParameters = new SignatureFieldParameters();
+			imageParameters.setFieldParameters(signatureFieldParameters);
+			signatureFieldParameters.setPage(remoteImageParameters.getPage());
+			signatureFieldParameters.setOriginX(remoteImageParameters.getxAxis());
+			signatureFieldParameters.setOriginY(remoteImageParameters.getyAxis());
+			signatureFieldParameters.setHeight((int) remoteImageParameters.getHeight());
+			signatureFieldParameters.setWidth((int) remoteImageParameters.getWidth());
+			signatureFieldParameters.setRotation(remoteImageParameters.getRotation());
+			RemoteSignatureImageTextParameters remoteTextParameters = remoteImageParameters.getTextParameters();
+			if (remoteTextParameters != null) {
+				SignatureImageTextParameters textParameters = new SignatureImageTextParameters();
+				textParameters.setText(remoteTextParameters.getText());
+				imageParameters.setTextParameters(textParameters);
+				padesParams.setImageParameters(imageParameters);
+			}
+			padesParams.setReason(remoteImageParameters.getSignatureReason());
+			padesParams.setLocation(remoteImageParameters.getSignerLocation());
+		}
+	}
 }
