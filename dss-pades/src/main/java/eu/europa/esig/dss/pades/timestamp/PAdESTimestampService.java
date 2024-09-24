@@ -78,9 +78,18 @@ public class PAdESTimestampService {
 		Objects.requireNonNull(params, "PAdESTimestampParameters cannot be null!");
 		PAdESUtils.assertPdfDocument(document);
 
-		final DSSMessageDigest messageDigest = pdfSignatureService.messageDigest(document, params);
-		final TimestampBinary timeStampToken = tspSource.getTimeStampResponse(messageDigest.getAlgorithm(), messageDigest.getValue());
-		final byte[] encoded = DSSASN1Utils.getDEREncoded(timeStampToken);
+		// ALISDEV - originalni kod
+		// final DSSMessageDigest messageDigest = pdfSignatureService.messageDigest(document, params);
+		// final TimestampBinary timeStampToken = tspSource.getTimeStampResponse(messageDigest.getAlgorithm(), messageDigest.getValue());
+		// final byte[] encoded = DSSASN1Utils.getDEREncoded(timeStampToken);
+
+		// ALISDEV - uprava, ktera prebira rezitko z KEO4
+		byte[] encoded = params.getEncodedTimeStampToken();
+		if(encoded == null) {
+			final DSSMessageDigest messageDigest = pdfSignatureService.messageDigest(document, params);
+			final TimestampBinary timeStampToken = tspSource.getTimeStampResponse(messageDigest.getAlgorithm(), messageDigest.getValue());
+			encoded = DSSASN1Utils.getDEREncoded(timeStampToken);
+		}
 		return pdfSignatureService.sign(document, encoded, params);
 	}
 

@@ -96,23 +96,25 @@ class PAdESLevelBaselineT implements SignatureExtension<PAdESSignatureParameters
 		if (Utils.isCollectionEmpty(signatures)) {
 			throw new IllegalInputException("No signatures found to be extended!");
 		}
-
-		if (isTLevelExtensionRequired(parameters, signatures)) {
-			final SignatureRequirementsChecker signatureRequirementsChecker =
-					new PAdESSignatureRequirementsChecker(certificateVerifier, parameters);
-			
-			signatureRequirementsChecker.assertExtendToTLevelPossible(signatures);
-			
-			signatureRequirementsChecker.assertSignaturesValid(signatures);
-			signatureRequirementsChecker.assertSigningCertificateIsValid(signatures);
-			
-			// Will add a DocumentTimeStamp. signature-timestamp (CMS) is impossible to add while extending
-			return timestampDocument(document, parameters.getSignatureTimestampParameters(),
-					parameters.getPasswordProtection(), getSignatureTimestampService());
-
-		} else {
-			return document;
-		}
+	    // ALISDEV nechceme prerazitkovavat - BEGIN
+//		if (isTLevelExtensionRequired(parameters, signatures)) {
+//			final SignatureRequirementsChecker signatureRequirementsChecker =
+//					new PAdESSignatureRequirementsChecker(certificateVerifier, parameters);
+//
+//			signatureRequirementsChecker.assertExtendToTLevelPossible(signatures);
+//
+//			signatureRequirementsChecker.assertSignaturesValid(signatures);
+//			signatureRequirementsChecker.assertSigningCertificateIsValid(signatures);
+//
+//			// Will add a DocumentTimeStamp. signature-timestamp (CMS) is impossible to add while extending
+//			return timestampDocument(document, parameters.getSignatureTimestampParameters(),
+//					parameters.getPasswordProtection(), getSignatureTimestampService());
+//
+//		} else {
+//			return document;
+//		}
+		 // ALISDEV - END
+		return document;
 	}
 
 	/**

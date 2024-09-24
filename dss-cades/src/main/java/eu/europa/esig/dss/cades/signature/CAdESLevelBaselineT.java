@@ -134,7 +134,7 @@ public class CAdESLevelBaselineT extends CAdESSignatureExtension {
 		final DigestAlgorithm timestampDigestAlgorithm = parameters.getSignatureTimestampParameters().getDigestAlgorithm();
 		final DSSMessageDigest messageDigest = new DSSMessageDigest(
 				timestampDigestAlgorithm, DSSUtils.digest(timestampDigestAlgorithm, signerInformation.getSignature()));
-		ASN1Object signatureTimeStamp = getTimeStampAttributeValue(messageDigest, timestampDigestAlgorithm);
+		ASN1Object signatureTimeStamp = getTimeStampAttributeValue(messageDigest, timestampDigestAlgorithm, parameters); // ALISDEV - predavani parametru s cas razitkem
 		return unsignedAttributes.add(PKCSObjectIdentifiers.id_aa_signatureTimeStampToken, signatureTimeStamp);
 	}
 

@@ -25,6 +25,7 @@ import eu.europa.esig.dss.enumerations.TimestampContainerForm;
 
 import javax.xml.crypto.dsig.CanonicalizationMethod;
 import java.io.Serializable;
+import java.util.Arrays;
 import java.util.Objects;
 
 /**
@@ -54,6 +55,11 @@ public class RemoteTimestampParameters implements Serializable {
 	 * Specifies format of the output file containing a timestamp
 	 */
 	private TimestampContainerForm timestampContainerForm;
+
+	/**
+	 * Uses for transfering signatures timestaps
+	 */
+	private byte[] encodedBcTimeStampToken; //alisdev
 
 	/**
 	 * Empty constructor
@@ -142,6 +148,18 @@ public class RemoteTimestampParameters implements Serializable {
 		this.timestampContainerForm = timestampForm;
 	}
 
+	public byte[] getEncodedTimeStampToken() { // alisdev
+		return encodedBcTimeStampToken;
+	}
+
+	/**
+	 * Use to transfer custom timestamps
+	 * @param encodedTimeStampToken encoded timestamp
+	 */
+	public void setEncodedTimeStampToken( byte[] encodedTimeStampToken ) { //alisdev
+		this.encodedBcTimeStampToken = encodedTimeStampToken;
+	}
+
 	@Override
 	public int hashCode() {
 		final int prime = 31;
@@ -149,6 +167,7 @@ public class RemoteTimestampParameters implements Serializable {
 		result = (prime * result) + ((digestAlgorithm == null) ? 0 : digestAlgorithm.hashCode());
 		result = (prime * result) + ((timestampContainerForm == null) ? 0 : timestampContainerForm.hashCode());
 		result = (prime * result) + ((canonicalizationMethod == null) ? 0 : canonicalizationMethod.hashCode());
+		result = (prime * result) + Arrays.hashCode(encodedBcTimeStampToken); // alisdev
 		return result;
 	}
 
@@ -181,13 +200,18 @@ public class RemoteTimestampParameters implements Serializable {
 		} else if (timestampContainerForm != other.timestampContainerForm) {
 			return false;
 		}
+		// BEGIN ALISDEV
+		if (!Arrays.equals(encodedBcTimeStampToken, other.encodedBcTimeStampToken)) { // alisdev
+			return false; // alisdev
+		}
+		// END ALISDEV
 		return true;
 	}
 
 	@Override
 	public String toString() {
 		return "RemoteTimestampParameters{digestAlgorithm='" + digestAlgorithm + "', canonicalizationMethod='"
-				+ canonicalizationMethod + "', timestampContainerForm=" + timestampContainerForm + '}';
+				+ canonicalizationMethod + "', timestampContainerForm=" + timestampContainerForm + ", encodedBcTimeStampToken=" + Arrays.toString(encodedBcTimeStampToken) + '}';
 	}
 
 }

@@ -15,13 +15,14 @@
  * Lesser General Public License for more details.
  * 
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the Free Software
+ * License along with this library; if not, write to th e Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 package eu.europa.esig.dss.model;
 
 import eu.europa.esig.dss.enumerations.DigestAlgorithm;
 
+import java.util.Arrays;
 import java.util.Objects;
 
 /**
@@ -36,6 +37,11 @@ public abstract class TimestampParameters implements SerializableTimestampParame
 	 * The digest algorithm to provide to the timestamping authority
 	 */
 	protected DigestAlgorithm digestAlgorithm = DigestAlgorithm.SHA512;
+
+	/**
+	 * Uses for transfering signatures timestaps (ALISDEV)
+	 */
+	private byte[] encodedBcTimeStampToken; // alisdev prenos cas. razitka z KEO4
 
 	/**
 	 * Empty constructor
@@ -68,11 +74,27 @@ public abstract class TimestampParameters implements SerializableTimestampParame
 		this.digestAlgorithm = digestAlgorithm;
 	}
 
+	/**
+	 * Returns the encoded timestamp token (ALISDEV)
+	 */
+	public byte[] getEncodedTimeStampToken() {
+		return encodedBcTimeStampToken; // alisdev prenos cas. razitka z KEO4
+	}
+
+	/**
+	 * Sets the encoded timestamp token (ALISDEV)
+	 * @param encodedTimeStampToken use to transfer custom timestamps
+	 */
+	public void setEncodedTimeStampToken( byte[] encodedTimeStampToken ) {
+		this.encodedBcTimeStampToken = encodedTimeStampToken;  // alisdev prenos cas. razitka z KEO4
+	}
+
 	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
 		result = (prime * result) + ((digestAlgorithm == null) ? 0 : digestAlgorithm.hashCode());
+		result = (prime * result) + Arrays.hashCode(encodedBcTimeStampToken); // alisdev
 		return result;
 	}
 
@@ -91,12 +113,15 @@ public abstract class TimestampParameters implements SerializableTimestampParame
 		if (digestAlgorithm != other.digestAlgorithm) {
 			return false;
 		}
+		if (!Arrays.equals(encodedBcTimeStampToken, other.encodedBcTimeStampToken)) { // alisdev
+			return false; // alisdev
+		}
 		return true;
 	}
 
 	@Override
 	public String toString() {
-		return "TimestampParameters {digestAlgorithm=" + digestAlgorithm.getName() + "}";
+		return "TimestampParameters {digestAlgorithm=" + digestAlgorithm.getName() + ", encodedBcTimeStampToken=" + Arrays.toString(encodedBcTimeStampToken) + "}";
 	}
 
 }

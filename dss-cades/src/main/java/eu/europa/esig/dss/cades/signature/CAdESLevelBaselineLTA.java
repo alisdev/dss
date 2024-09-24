@@ -143,7 +143,7 @@ public class CAdESLevelBaselineLTA extends CAdESLevelBaselineLT {
 		final DSSMessageDigest timestampMessageDigest = timestampExtractor.getArchiveTimestampV3MessageImprint(
 				signerInformation, atsHashIndexAttribute, originalDocument, timestampDigestAlgorithm);
 
-		final ASN1Object timeStampAttributeValue = getTimeStampAttributeValue(timestampMessageDigest, timestampDigestAlgorithm,
+		final ASN1Object timeStampAttributeValue = getTimeStampAttributeValue(timestampMessageDigest, timestampDigestAlgorithm, parameters /* ALISDEV - predavani prarametru s cas. razitkem */,
 				atsHashIndexAttribute);
 
 		return unsignedAttributes.add(OID.id_aa_ets_archiveTimestampV3, timeStampAttributeValue);
